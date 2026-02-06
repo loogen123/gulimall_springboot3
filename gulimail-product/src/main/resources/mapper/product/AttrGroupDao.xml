@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.lg.gulimail.product.dao.AttrGroupDao">
+
+    <select id="getAttrGroupWithAttrsBySpuId" resultMap="SpuItemAttrGroupVoName">
+        SELECT
+            ag.attr_group_name,
+            ag.attr_group_id,
+            pav.attr_id,
+            pav.attr_name,
+            pav.attr_value
+        FROM pms_attr_group ag
+                 LEFT JOIN pms_attr_attrgroup_relation aar ON aar.attr_group_id = ag.attr_group_id
+                 LEFT JOIN pms_product_attr_value pav ON pav.attr_id = aar.attr_id
+        WHERE ag.catelog_id = #{catelogId} AND pav.spu_id = #{spuId}
+    </select>
+
+    <resultMap id="SpuItemAttrGroupVoName" type="com.lg.gulimail.product.vo.SpuItemAttrGroupVo">
+        <result property="groupName" column="attr_group_name"/>
+        <collection property="attrs" ofType="com.lg.gulimail.product.vo.SpuBaseAttrVo">
+            <result property="attrName" column="attr_name"/>
+            <result property="attrValue" column="attr_value"/>
+        </collection>
+    </resultMap>
+</mapper>

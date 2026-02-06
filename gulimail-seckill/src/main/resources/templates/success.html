@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <title>秒杀成功 - 谷粒商城</title>
+    <script type="text/javascript" src="http://cart.gulimail.com/static/cart/js/jquery-3.1.1.min.js"></script>
+    <script type="text/javascript" src="http://cart.gulimail.com/static/cart/bootstrap/js/bootstrap.js"></script>
+    <link rel="stylesheet" type="text/css" href="http://cart.gulimail.com/static/cart/bootstrap/css/bootstrap.css" />
+    <link rel="stylesheet" type="text/css" href="http://cart.gulimail.com/static/cart/css/success.css" />
+    <style>
+        .order-info-tip { color: #e4393c; font-weight: bold; margin-top: 10px; }
+        .btn-pay { background-color: #e4393c; color: white !important; font-weight: bold; }
+    </style>
+</head>
+
+<body>
+<div class="alert-info">
+    <div class="hd_wrap_top">
+        <ul class="hd_wrap_left"><li class="hd_home"><i class="glyphicon glyphicon-home"></i><a href="http://gulimail.com">谷粒商城首页</a></li></ul>
+        <ul class="hd_wrap_right">
+            <li class="forel">
+                <th:block th:if="${session.loginUser == null}"><a href="http://auth.gulimail.com/login.html">你好,请登录</a></th:block>
+                <th:block th:if="${session.loginUser != null}"><a href="javascript:;" style="color: #e4393c;">你好，[[${session.loginUser.nickname}]]</a></th:block>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<div class="main">
+    <div class="success-wrap">
+        <div class="w" id="result">
+            <div class="m succeed-box">
+                <div class="mc success-cont">
+                    <div class="success-lcol">
+                        <div class="success-top">
+                            <b class="succ-icon"></b>
+                            <h3 class="ftx-02">恭喜你，秒杀名额抢购成功！</h3>
+                        </div>
+                        <div class="p-item">
+                            <div class="p-info">
+                                <div class="p-name">
+                                    <h4 class="order-info-tip">订单正在生成中，请在15分钟内完成支付</h4>
+                                    <p>订单号：<span th:text="${orderSn}">20260201123456</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="success-btns success-btns-new">
+                        <div class="clr"></div>
+                        <div class="bg_shop">
+                            <a class="btn-addtocart btn-pay"
+                               th:href="'http://order.gulimail.com/pay.html?orderSn=' + ${orderSn}">
+                                <b></b>立即前往收银台支付
+                            </a>
+                            <a class="btn-tobback" href="http://gulimail.com">继续购物</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

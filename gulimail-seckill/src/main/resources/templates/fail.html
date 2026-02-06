@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <title>秒杀失败 - 谷粒商城</title>
+    <script type="text/javascript" src="http://cart.gulimail.com/static/cart/js/jquery-3.1.1.min.js"></script>
+    <script type="text/javascript" src="http://cart.gulimail.com/static/cart/bootstrap/js/bootstrap.js"></script>
+    <link rel="stylesheet" type="text/css" href="http://cart.gulimail.com/static/cart/bootstrap/css/bootstrap.css" />
+    <link rel="stylesheet" type="text/css" href="http://cart.gulimail.com/static/cart/css/success.css" />
+    <style>
+        /* 失败页面的特殊样式：灰色或黄色警告色 */
+        .fail-icon {
+            display: inline-block; width: 25px; height: 25px;
+            background: url(http://cart.gulimail.com/static/cart/img/p-icons-new.png) no-repeat -30px -350px; /* 这里可以根据你实际的图标微调 */
+            vertical-align: middle; margin-right: 10px;
+        }
+        .fail-text { color: #f90; font-weight: bold; font-size: 20px; }
+        .reason-box { background: #fffdee; border: 1px solid #edd28b; padding: 15px; margin-top: 20px; }
+    </style>
+</head>
+
+<body>
+<div class="alert-info">
+    <div class="hd_wrap_top">
+        <ul class="hd_wrap_left"><li class="hd_home"><i class="glyphicon glyphicon-home"></i><a href="http://gulimail.com">谷粒商城首页</a></li></ul>
+    </div>
+</div>
+
+<div class="main">
+    <div class="success-wrap">
+        <div class="w" id="result">
+            <div class="m succeed-box">
+                <div class="mc success-cont">
+                    <div class="success-lcol">
+                        <div class="success-top">
+                            <h3 class="fail-text">很遗憾，抢购未成功</h3>
+                        </div>
+                        <div class="p-item">
+                            <div class="p-info reason-box">
+                                <div class="p-name">
+                                    <h4 th:text="${msg != null ? msg : '手慢了，商品已被抢光了！'}">具体原因说明</h4>
+                                    <p style="color: #999;">秒杀活动火爆，请下次再接再厉。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="success-btns success-btns-new">
+                        <div class="clr"></div>
+                        <div class="bg_shop">
+                            <a class="btn-addtocart" href="http://gulimail.com" style="background-color: #7abd54; color: white !important;">
+                                返回商城首页
+                            </a>
+                            <a class="btn-tobback" href="javascript:history.back();">返回上一页</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

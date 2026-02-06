@@ -1,0 +1,116 @@
+spring:
+  cloud:
+    gateway:
+      routes:
+        # ======= 第一部分：基于 Host (域名) 的精准路由 =======
+        # 规则：子域名路由必须放在最前面，防止被后面的通用域名截胡
+
+        # 1. 购物车服务
+        - id: gulimail_cart_route
+          uri: lb://gulimail-cart
+          predicates:
+            - Host=cart.gulimail.com
+
+        # 2. 认证服务 (登录/注册)
+        - id: gulimail_auth_route
+          uri: lb://gulimail-auth-server
+          predicates:
+            - Host=auth.gulimail.com
+
+        # 3. 检索服务
+        - id: gulimail_search_route
+          uri: lb://gulimail-search
+          predicates:
+            - Host=search.gulimail.com
+
+        # 4. 订单服务
+        - id: gulimail_order_route
+          uri: lb://gulimail-order
+          predicates:
+            - Host=order.gulimail.com
+
+        # 5. 秒杀服务
+        - id: gulimail_seckill_route
+          uri: lb://gulimail-seckill
+          predicates:
+            - Host=seckill.gulimail.com
+
+        # 6. 会员中心
+        - id: gulimail_member_host_route
+          uri: lb://gulimail-member
+          predicates:
+            - Host=member.gulimail.com
+
+        # ======= 第二部分：基于 Path (API路径) 的后端管理路由 =======
+
+        # 7. 商品服务 API
+        - id: product_route
+          uri: lb://gulimail-product
+          predicates:
+            - Path=/api/product/**
+          filters:
+            - RewritePath=/api/(?<segment>.*), /$\{segment}
+
+        # 8. 优惠券服务 API
+        - id: coupon_route
+          uri: lb://gulimail-coupon
+          predicates:
+            - Path=/api/coupon/**
+          filters:
+            - RewritePath=/api/coupon/(?<segment>.*), /coupon/$\{segment}
+
+        # 9. 第三方服务 API (阿里云OSS/短信)
+        - id: third_party_route
+          uri: lb://gulimail-third-party
+          predicates:
+            - Path=/api/thirdparty/**
+          filters:
+            - RewritePath=/api/thirdparty/(?<segment>.*), /$\{segment}
+
+        # 10. 仓储服务 API
+        - id: ware_route
+          uri: lb://gulimail-ware
+          predicates:
+            - Path=/api/ware/**
+          filters:
+            - RewritePath=/api/(?<segment>.*), /$\{segment}
+
+        # 11. 会员服务 API
+        - id: member_route
+          uri: lb://gulimail-member
+          predicates:
+            - Path=/api/member/**
+          filters:
+            - RewritePath=/api/(?<segment>.*), /$\{segment}
+
+        # 12. 人人开源管理后台 (兜底所有的 /api 请求)
+        - id: admin_route
+          uri: lb://renren-fast
+          predicates:
+            - Path=/api/**
+          filters:
+            - RewritePath=/api/(?<segment>.*), /renren-fast/$\{segment}
+
+        # ======= 第三部分：保底路由 (处理主站与详情页) =======
+
+        # 13. 默认主站与商品详情页
+        # 理由：范围最大，匹配 gulimail.com 或 item.gulimail.com，必须放最后
+        - id: gulimail_host_route
+          uri: lb://gulimail-product
+          predicates:
+            - Host=gulimail.com, item.gulimail.com
+    sentinel:
+      transport:
+        dashboard: localhost:8333
+logging:
+  pattern:
+    # 让日志显示 TraceId 和 SpanId
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0 # 100% 采样，生产环境通常设为 0.1
+  zipkin:
+    tracing:
+      endpoint: "http://192.168.10.101:9411/api/v2/spans"

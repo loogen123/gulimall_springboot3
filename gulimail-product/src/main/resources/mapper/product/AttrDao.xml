@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.lg.gulimail.product.dao.AttrDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.lg.gulimail.product.entity.AttrEntity" id="attrMap">
+        <result property="attrId" column="attr_id"/>
+        <result property="attrName" column="attr_name"/>
+        <result property="searchType" column="search_type"/>
+        <result property="valueType" column="value_type"/>
+        <result property="icon" column="icon"/>
+        <result property="valueSelect" column="value_select"/>
+        <result property="attrType" column="attr_type"/>
+        <result property="enable" column="enable"/>
+        <result property="catelogId" column="catelog_id"/>
+        <result property="showDesc" column="show_desc"/>
+    </resultMap>
+    <select id="selectSearchAttrIds" resultType="java.lang.Long">
+        SELECT attr_id FROM pms_attr
+        WHERE search_type = 1
+        <if test="attrIds != null and attrIds.size() > 0">
+            AND attr_id IN
+            <foreach collection="attrIds" item="id" separator="," open="(" close=")">
+                #{id}
+            </foreach>
+        </if>
+        <if test="attrIds == null or attrIds.size() == 0">
+            AND 1=2
+        </if>
+    </select>
+</mapper>

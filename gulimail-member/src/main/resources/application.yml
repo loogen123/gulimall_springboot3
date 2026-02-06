@@ -1,0 +1,34 @@
+spring:
+  datasource:
+    username: root
+    password: root
+    url: jdbc:mysql://192.168.10.101:3306/gulimail_ums?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+  application:
+    name: gulimail-member
+  data:
+    redis:
+          host: 192.168.10.101  # 这里的 IP 必须和你 Nacos、DB 所在的服务器一致
+          port: 6379
+  session:
+    store-type: redis # 明确指定使用 redis 存储 session
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  global-config:
+    db-config:
+      id-type: auto
+server:
+  port: 8000
+management:
+  zipkin:
+    tracing:
+      # 错误写法：http://localhost:9411/api/v2/spans
+      # 正确写法：改成你 Linux 服务器的真实 IP
+      endpoint: http://192.168.10.101:9411/api/v2/spans
+  tracing:
+    sampling:
+      probability: 1.0  # 确保 100% 采样，方便调试

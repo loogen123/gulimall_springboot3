@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<title>购物车</title>
+	<link rel="icon" href="/static/cart/img/心04.png" type="image/x-icon" />
+	<link rel="stylesheet" href="/static/cart/css/One_bdyStyle.css">
+	<link rel="stylesheet" href="/static/cart/css/index.css">
+	<link rel="stylesheet" href="/static/cart/css/One_mainFoot.css">
+	<link rel="stylesheet" href="/static/cart/css/font-awesome-4.7.0/css/font-awesome.css" />
+	<script src="/static/cart/js/jquery-3.1.1.min.js" charset="utf-8"></script>
+	<style>
+		/* 1. 确保整行内容垂直居中 */
+		.One_ShopCon ol {
+			display: flex;
+			align-items: center; /* 关键：让这一行所有的 li（单价、数量、小计）都在水平线上对齐 */
+			list-style: none;
+			padding: 15px 0;
+		}
+
+		/* 2. 商品信息列（图片+文字）的布局 */
+		.item-msg {
+			display: flex;         /* 强制图片和标题并排 */
+			align-items: center;   /* 图片和文字垂直居中（如果你想文字对齐图片顶部，改为 flex-start） */
+			text-align: left;
+		}
+
+		.item-msg dt img {
+			width: 80px;
+			height: 80px;
+			border: 1px solid #eee;
+			margin-right: 15px;    /* 图片和文字之间的间距 */
+			flex-shrink: 0;        /* 防止图片被文字挤压变形 */
+		}
+
+		.item-msg dd {
+			margin: 0;
+			flex: 1;               /* 占据剩余的宽度 */
+		}
+
+		.item-msg dd p {
+			font-size: 12px;
+			line-height: 1.6;
+			color: #333;
+			/* 限制标题显示两行，超出显示省略号，防止撑坏排版 */
+			display: -webkit-box;
+			-webkit-box-orient: vertical;
+			-webkit-line-clamp: 2;
+			overflow: hidden;
+		}
+
+		/* 3. 调整各列宽度占比（需与表头对齐） */
+		.col-check { width: 5%; }
+		.col-info  { width: 40%; } /* 商品列 */
+		.col-price { width: 15%; text-align: center; }
+		.col-num   { width: 15%; text-align: center; }
+		.col-total { width: 15%; text-align: center; }
+		.col-action{ width: 10%; text-align: center; }
+	</style>
+</head>
+<body>
+<header>
+	<a name="mao1">
+		<div class="header">
+			<ul class="header-left">
+				<li><a href="http://gulimail.com">首页</a></li>
+			</ul>
+			<ul class="header-right">
+				<li th:if="${session.loginUser == null}">
+					<a href="http://auth.gulimail.com/login.html" class="aa">你好，请登录</a>
+				</li>
+				<li th:if="${session.loginUser == null}">
+					<a href="http://auth.gulimail.com/reg.html" style="color: red;">免费注册</a>
+				</li>
+
+				<li th:if="${session.loginUser != null}">
+					<a href="javascript:;" style="font-weight: bold;">
+						<span style="color: red;">欢迎，[[${session.loginUser.nickname}]]</span>
+					</a>
+				</li>
+				<li th:if="${session.loginUser != null}">
+					<a href="http://auth.gulimail.com/logout">退出</a>
+				</li>
+
+				<li class="spacer"></li>
+				<li>
+					<a href="javascript:;" class="aa" id="myOrderBtn">我的订单</a> |
+				</li>
+				<li class="spacer"></li>
+			</ul>
+			<div style="clear: both;"></div>
+		</div>
+	</a>
+</header>
+
+<div class="one_search">
+	<div class="one_sousuo">
+		<div class="one_search_top">
+			<div class="one_top_left">
+				<a href="http://gulimail.com" class="one_left_logo"><img src="/static/cart/img/logo1.jpg"></a>
+				<a href="#" class="one_left_link">购物车</a>
+			</div>
+			<div class="one_top_right">
+				<input type="text" class="one_right_txt" placeholder="" onfocus="this.placeholder=''" onblur="this.placeholder='' ">
+				<input type="button" value="搜索" class="one_right_btn">
+			</div>
+		</div>
+		<div class="one_search_load" th:if="${userId}==null">
+			<img src="/static/cart/img/shop_07.jpg" class="one_load_wraing">
+			<span>您还没有登录！登录后购物车的商品将保存到您账号中</span>
+			<a href="#"><input type="button" onclick="login()" value="立即登录" class="one_load_btn"></a>
+		</div>
+	</div>
+</div>
+
+<div class="One_BdyShop">
+	<div class="OneBdy_box">
+		<div class="One_tabTop">
+			<div class="One_Topleft">
+				<span>全部商品 </span>
+			</div>
+		</div>
+		<div class="One_ShopTop">
+			<ul>
+				<li><input type="checkbox" class="allCheck">全选</li>
+				<li>商品</li>
+				<li>单价</li>
+				<li>数量</li>
+				<li>小计</li>
+				<li>操作</li>
+			</ul>
+		</div>
+
+		<div class="One_ShopCon">
+			<ul>
+				<li th:each="cartInfo:${cartList}">
+					<div> </div>
+					<div>
+						<ol>
+							<li><input type="checkbox" class="check" th:value="${cartInfo.skuId}" onchange="checkSku(this)" th:checked="${cartInfo.check}" /></li>
+							<li class="col-info">
+								<div class="item-msg">
+									<dt>
+										<img th:src="${cartInfo.image}" src="/static/cart/img/shop1.jpg" alt="">
+									</dt>
+									<dd th:onclick="'toItem('+${cartInfo.skuId}+')'">
+										<p>
+											<span th:text="${cartInfo.title}">商品标题</span>
+										</p>
+									</dd>
+								</div>
+							</li>
+							<li>
+								<p class="dj" th:text="'￥'+${cartInfo.price}">0.00</p>
+							</li>
+							<li>
+								<p>
+									<span class="count_sub" th:onclick="'changeItemCount(' + ${cartInfo.skuId} + ',-1)'" style="cursor:pointer;">-</span>
+
+									<span th:id="'count-' + ${cartInfo.skuId}" th:text="${cartInfo.count}">1</span>
+
+									<span class="count_add" th:onclick="'changeItemCount(' + ${cartInfo.skuId} + ',1)'" style="cursor:pointer;">+</span>
+								</p>
+							</li>
+							<li style="font-weight:bold">
+								<p class="zj" th:id="'totalPrice-' + ${cartInfo.skuId}" th:text="'￥' + ${cartInfo.totalPrice}">￥0.00</p>
+							</li>
+							<li>
+								<p th:onclick="'deleteItem(' + ${cartInfo.skuId} + ')'" style="cursor:pointer;">删除</p>
+							</li>
+						</ol>
+					</div>
+				</li>
+			</ul>
+		</div>
+
+		<div class="One_ShopFootBuy fix1">
+			<div>
+				<ul>
+					<li><input type="checkbox" class="allCheck"><span>全选</span></li>
+					<li>删除选中的商品</li>
+					<li>移到我的关注</li>
+					<li>清除下柜商品</li>
+				</ul>
+			</div>
+			<div>
+				<font style="color:#e64346;font-weight:bold;" class="sumNum"> </font>&nbsp;
+				<ul>
+					<li><img src="/static/cart/img/buyNumleft.png" alt=""></li>
+					<li><img src="/static/cart/img/buyNumright.png" alt=""></li>
+				</ul>
+			</div>
+			<div>
+				<ol>
+					<li>总价:<span style="color:#e64346;font-weight:bold;font-size:16px;" class="fnt">￥0.00</span> </li>
+				</ol>
+			</div>
+			<div>
+				<button onclick="toTrade()" type="button" style="cursor: pointer;">去结算</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="One_isDel">
+	<p>
+		<span>删除</span><span><img src="/static/cart/img/错误.png" alt=""></span>
+	</p>
+	<div>
+		<dl>
+			<dt><img src="/static/cart/img/感叹三角形 (2).png" alt=""></dt>
+			<dd>
+				<li>删除商品？</li>
+				<li>您可以选择移到关注，或删除商品。</li>
+			</dd>
+		</dl>
+	</div>
+	<div><button type="button">删除</button></div>
+</div>
+
+<div class="One_moveGzIfNull">
+	<p>
+		<span>删除</span><span><img src="/static/cart/img/错误.png" alt=""></span>
+	</p>
+	<dl>
+		<dt><img src="/static/cart/img/感叹三角形 (2).png" alt=""></dt>
+		<dd>请至少选中一件商品！</dd>
+	</dl>
+</div>
+
+<div class="one_footer"></div>
+</body>
+
+<script src="/static/cart/js/index.js" charset="utf-8"></script>
+<script type="text/javascript">
+	/**
+	 * 1. 改变商品数量 (加/减)
+	 */
+	function changeItemCount(skuId, num) {
+		var countSpan = $("#count-" + skuId);
+		var currentCount = parseInt(countSpan.text());
+
+		// 1. 边界判定：如果当前是 1 且用户点减号，直接拦截
+		if (currentCount <= 1 && num == -1) return;
+
+		// 2. 异步更新 Redis 中的数量
+		$.get("http://cart.gulimail.com/updateCount", {skuId: skuId, num: num}, function(data) {
+			// data 为后端返回的当前商品最新的 CartItem 对象
+
+			// 3. 更新当前行的显示数量
+			countSpan.text(data.count);
+
+			// 4. 更新当前商品的小计金额
+			// 确保你的 HTML 中小计标签 ID 为 totalPrice-skuId
+			$("#totalPrice-" + skuId).text("￥" + data.totalPrice.toFixed(2));
+
+			// 5. 【核心】触发全局总价重算（仅统计已勾选的商品）
+			sumSumPrice();
+		});
+	}
+
+	/**
+	 * 2. 勾选/取消勾选商品
+	 */
+	function checkSku(obj) {
+		var skuId = $(obj).val();
+		var checked = $(obj).prop("checked") ? 1 : 0;
+
+		// 使用 Ajax 异步发送请求
+		$.get("http://cart.gulimail.com/checkItem", {skuId: skuId, check: checked}, function() {
+			calculateTotal();
+		});
+	}
+	/**
+	 * 3. 计算购物车选中商品的总价
+	 * 对应你页面底部的总金额显示
+	 */
+	function sumSumPrice() {
+		var totalAmount = 0; // 总金额
+		var count = 0;       // 选中件数
+
+		// 1. 遍历所有商品行的 checkbox
+		$(".check").each(function() {
+			// 2. 只处理选中的项
+			if ($(this).prop("checked")) {
+				// 3. 找到当前行（ol）下的“小计”金额 (class="zj")
+				// .parents("ol") 是向上找父节点，.find(".zj") 是向下找小计标签
+				var zjText = $(this).parents("ol").find(".zj").text().replace("￥", "");
+				totalAmount += parseFloat(zjText);
+				count++;
+			}
+		});
+
+		// 4. 将计算结果渲染到页面的合计栏
+		// 假设合计金额的 class 为 fnt，选中件数的标签内有 em
+		$(".fnt").html("￥" + totalAmount.toFixed(2));
+		$(".totalQuantity em").text(count);
+	}
+	/**
+	 * 4. 删除商品
+	 */
+	function deleteItem(skuId) {
+		if (confirm("确定要从购物车中删除该商品吗？")) {
+			location.href = "http://cart.gulimail.com/deleteItem?skuId=" + skuId;
+		}
+	}
+
+	/**
+	 * 5. 页面跳转逻辑
+	 */
+	function toTrade() {
+		window.location.href = "http://order.gulimail.com/confirm.html";
+	}
+
+	function toItem(skuId) {
+		if(!skuId || skuId == 'undefined'){
+			alert("商品ID异常");
+			return;
+		}
+		window.location.href = "http://item.gulimail.com/" + skuId + ".html";
+	}
+
+	function login() {
+		var s = encodeURIComponent(window.location.href);
+		window.location.href = "http://auth.gulimail.com/login.html?originUrl=" + s;
+	}
+
+	/**
+	 * 6. 页面初始化及图标效果
+	 */
+	$(function() {
+		// 初始计算一次总价
+		sumSumPrice();
+
+		// 底部购物车图标切换
+		$(".fade li>div a").mouseover(function() {
+			$(this).find("img").attr("src", "/static/cart/img/one_mian_gwc2.png");
+		}).mouseout(function() {
+			$(this).find("img").attr("src", "/static/cart/img/one_mian_gwc1.png");
+		});
+	});
+	$(function() {
+		/**
+		 * 1. 全选/全不选 绑定
+		 * 当点击任何一个 .allCheck 时，另一个全选框以及所有商品的 .check 都要同步
+		 */
+		$(".allCheck").click(function() {
+			// 获取当前全选框的状态（true/false）
+			var isChecked = $(this).prop("checked");
+
+			// 同步所有的全选框状态
+			$(".allCheck").prop("checked", isChecked);
+
+			// 同步所有商品的复选框状态
+			$(".check").prop("checked", isChecked);
+
+			// 【关键】全选操作后，重新计算总价
+			sumSumPrice();
+
+			// 可选：如果需要同步到后端数据库/Redis，可以在这里发送 Ajax 请求
+			// syncAllCheckStatus(isChecked);
+		});
+
+		/**
+		 * 2. 单个商品影响全选框 (反向联动)
+		 * 当任何一个商品的 .check 状态改变时，判断是否所有商品都被选中了
+		 */
+		$(".check").change(function() {
+			// 获取当前选中的商品数量
+			var checkedCount = $(".check:checked").length;
+			// 获取所有商品的数量
+			var totalCount = $(".check").length;
+
+			// 如果 选中数量 == 总数量，则全选框勾选，否则取消勾选
+			$(".allCheck").prop("checked", checkedCount === totalCount);
+
+			// 重新计算总价
+			sumSumPrice();
+		});
+	});
+	$(function() {
+		// 绑定点击事件
+		$(".one_right_btn").click(function() {
+			searchItems();
+		});
+
+		// 绑定回车事件
+		$(".one_right_txt").keyup(function(e) {
+			if (e.keyCode === 13) {
+				searchItems();
+			}
+		});
+
+		function searchItems() {
+			// 获取输入框内容
+			var keyword = $(".one_right_txt").val().trim();
+
+			// 编码处理，防止中文导致跳转异常
+			var url = "http://search.gulimail.com/list.html";
+			if (keyword !== "") {
+				url += "?keyword=" + encodeURIComponent(keyword);
+			}
+
+			// 执行跳转
+			window.location.href = url;
+		}
+	});
+	$(function() {
+		// 监听“我的订单”点击事件
+		$(document).on("click", "#myOrderBtn", function(e) {
+			e.preventDefault();
+
+			// 1. 嗅探：是否存在“退出”链接（登录标识）
+			var isLogin = $("a[href*='logout']").length > 0;
+
+			// 2. 嗅探：是否有“请登录”字样
+			var hasLoginText = $("a.aa:contains('请登录')").length > 0;
+
+			console.log("订单页跳转判定 -> 登录状态:", !hasLoginText || isLogin);
+
+			// 3. 判定逻辑
+			if (!isLogin && hasLoginText) {
+				// 未登录：弹窗提示并带回跳地址跳转到登录页
+				if (confirm("您当前尚未登录，请先登录再查看我的订单")) {
+					var currentUrl = encodeURIComponent(window.location.href);
+					location.href = "http://auth.gulimail.com/login.html?originUrl=" + currentUrl;
+				}
+			} else {
+				// 4. 已登录：跳转到你指定的订单列表页
+				location.href = "http://order.gulimail.com/list.html";
+			}
+			return false;
+		});
+	});
+</script>
+</html>

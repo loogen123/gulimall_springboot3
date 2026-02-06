@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourcePerFileMappings">
+    <file url="file://$PROJECT_DIR$/gulimail-member/src/main/resources/mapper/member/MemberLevelDao.xml" value="37c1be30-bb13-47c3-a8b6-a1fe0c09115b" />
+    <file url="file://$PROJECT_DIR$/gulimail-order/src/main/resources/mapper/order/OrderDao.xml" value="37c1be30-bb13-47c3-a8b6-a1fe0c09115b" />
+    <file url="file://$PROJECT_DIR$/gulimail-ware/src/main/resources/mapper/ware/WareSkuDao.xml" value="37c1be30-bb13-47c3-a8b6-a1fe0c09115b" />
+  </component>
+</project>

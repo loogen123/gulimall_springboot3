@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <title>成功加入购物车</title>
+    <script type="text/javascript" src="/static/cart/js/jquery-3.1.1.min.js"></script>
+    <script type="text/javascript" src="/static/cart/bootstrap/js/bootstrap.js"></script>
+    <script type="text/javascript" src="/static/cart/js/swiper.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/cart/css/swiper.min.css" />
+    <link rel="stylesheet" type="text/css" href="/static/cart/bootstrap/css/bootstrap.css" />
+    <link rel="stylesheet" type="text/css" href="/static/cart/css/success.css" />
+</head>
+
+<body>
+<div class="alert-info">
+    <div class="hd_wrap_top">
+        <ul class="hd_wrap_left">
+            <li class="hd_home"><i class="glyphicon glyphicon-home"></i>
+                <a href="http://gulimail.com">谷粒商城首页</a>
+            </li>
+        </ul>
+
+        <ul class="hd_wrap_right">
+            <li class="forel">
+                <th:block th:if="${member == null}">
+                    <a href="http://auth.gulimail.com/login.html" class="link_login">你好,请登录</a>&nbsp;
+                    <a href="http://auth.gulimail.com/reg.html" class="link_regist">免费注册</a>
+                </th:block>
+
+                <th:block th:if="${member != null}">
+                    <a href="javascript:;" class="link_login" style="color: #e4393c; font-weight: bold;">你好，[[${member.nickname}]]</a>&nbsp;
+                    <a href="http://auth.gulimail.com/logout" class="link_regist">退出</a>
+                </th:block>
+            </li>
+            <li class="spacer"></li>
+            <li>
+                <a href="javascript:;" class="aa" id="myOrderBtn">我的订单</a> |
+            </li>
+        </ul>
+    </div>
+</div>
+
+<div class="nav-tabs-justified">
+    <div class="nav_wrap">
+        <div class="nav_top">
+            <div class="nav_top_one">
+                <a href="http://gulimail.com"><img src="/static/cart/img/logo1.jpg" style="height: 60px;width:180px;" /></a>
+            </div>
+            <div class="nav_top_two"><input type="text" /><button>搜索</button></div>
+        </div>
+    </div>
+</div>
+
+<div class="main">
+    <div class="success-wrap">
+        <div class="w" id="result">
+            <div class="m succeed-box">
+                <div class="mc success-cont">
+                    <div class="success-lcol">
+                        <div class="success-top">
+                            <b class="succ-icon"></b>
+                            <h3 class="ftx-02">商品已成功加入购物车</h3>
+                        </div>
+                        <div class="p-item">
+                            <div class="p-img">
+                                <a href="javascript:;" target="_blank">
+                                    <img style="height: 60px;width:60px;" th:src="${skuInfo?.image}">
+                                </a>
+                            </div>
+                            <div class="p-info">
+                                <div class="p-name">
+                                    <a th:href="'http://item.gulimail.com/'+${skuInfo?.skuId}+'.html'"
+                                       th:text="${skuInfo?.title}">商品名称占位符</a>
+                                </div>
+                                <div class="p-extra">
+                                    <span class="txt" th:text="'数量：'+${skuNum}">数量：1</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="success-btns success-btns-new">
+                        <div class="success-ad">
+                            <a href="#none"></a>
+                        </div>
+                        <div class="clr"></div>
+                        <div class="bg_shop">
+                            <a class="btn-tobback" th:href="'http://item.gulimail.com/'+${skuInfo?.skuId}+'.html'">查看商品详情</a>
+                            <a class="btn-addtocart" href="http://cart.gulimail.com/cartList.html" id="GotoShoppingCart"><b></b>去购物车结算</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+<script type="text/javascript" src="/static/cart/js/success.js"></script>
+<script>
+    $(function() {
+        // 监听“我的订单”点击事件
+        $(document).on("click", "#myOrderBtn", function(e) {
+            e.preventDefault();
+
+            // 1. 嗅探：是否存在“退出”链接（登录标识）
+            var isLogin = $("a[href*='logout']").length > 0;
+
+            // 2. 嗅探：是否有“请登录”字样
+            var hasLoginText = $("a.aa:contains('请登录')").length > 0;
+
+            console.log("订单页跳转判定 -> 登录状态:", !hasLoginText || isLogin);
+
+            // 3. 判定逻辑
+            if (!isLogin && hasLoginText) {
+                // 未登录：弹窗提示并带回跳地址跳转到登录页
+                if (confirm("您当前尚未登录，请先登录再查看我的订单")) {
+                    var currentUrl = encodeURIComponent(window.location.href);
+                    location.href = "http://auth.gulimail.com/login.html?originUrl=" + currentUrl;
+                }
+            } else {
+                // 4. 已登录：跳转到你指定的订单列表页
+                location.href = "http://order.gulimail.com/list.html";
+            }
+            return false;
+        });
+    });
+</script>
+</html>
