@@ -27,7 +27,7 @@ public class AlipayTemplate {
 
     private String gatewayUrl = "https://openapi-sandbox.dl.alipaydev.com/gateway.do";
     private String returnUrl = "http://order.gulimail.com/list.html";
-    private String notifyUrl = "http://c536a58d.natappfree.cc/order/payed/notify";
+    private String notifyUrl = "http://t93f42a9.natappfree.cc/order/payed/notify";
 
     // 签名算法类型，固定为 RSA2
     private String signType = "RSA2";

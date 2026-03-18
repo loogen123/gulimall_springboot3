@@ -1,45 +1,55 @@
 spring:
+  application:
+    name: gulimail-product
+  # 【核心修正】必须紧跟在 application 后面，且格式严格
+  config:
+    import:
+      - nacos:gulimail-product.yaml?server-addr=127.0.0.1:8848&namespace=3531d4a7-97cf-4b4e-bfc1-fe4eec5f2f4e&refreshEnabled=true
+
   datasource:
     username: root
     password: root
     url: jdbc:mysql://192.168.10.101:3306/gulimail_pms?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   cloud:
     nacos:
       discovery:
         server-addr: 127.0.0.1:8848
+      config:
+        file-extension: yml
     openfeign:
       client:
-              config:
-                default:
-                  connect-timeout: 5000
-                  read-timeout: 5000
+        config:
+          default:
+            connect-timeout: 5000
+            read-timeout: 5000
+
   thymeleaf:
     cache: false
     prefix: classpath:/templates/
+
   data:
     redis:
       host: 192.168.10.101
       port: 6379
       jedis:
         pool:
-            jmx-enabled: false
-            max-active: 8      # 最大连接数
-            max-wait: -1ms     # 最大等待时间
-            max-idle: 8        # 最大空闲连接
-            min-idle: 0        # 最小空闲连接
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+
   cache:
     type: redis
     redis:
-      # 设置过期时间为 1 小时
       time-to-live: 3600000
-      # 开启前缀（建议开启，方便在 RedisInsight 中分类查看）
       use-key-prefix: true
-#      key-prefix: CACHE_
-      # 开启空值缓存，防止缓存穿透
       cache-null-values: true
+
   mvc:
     throw-exception-if-no-handler-found: false
+
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   global-config:
@@ -48,6 +58,7 @@ mybatis-plus:
       logic-delete-field: deleted
       logic-delete-value: 1
       logic-not-delete-value: 0
+
 server:
   port: 10000
 
@@ -60,12 +71,11 @@ gulimail:
     core-size: 20
     max-size: 200
     keep-alive-time: 10
+
 management:
   zipkin:
     tracing:
-      # 错误写法：http://localhost:9411/api/v2/spans
-      # 正确写法：改成你 Linux 服务器的真实 IP
       endpoint: http://192.168.10.101:9411/api/v2/spans
   tracing:
     sampling:
-      probability: 1.0  # 确保 100% 采样，方便调试
+      probability: 1.0

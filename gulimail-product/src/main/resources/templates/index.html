@@ -569,6 +569,26 @@
 
 </div>
 
+<div class="ai_agent_container" style="width: 1190px; margin: 20px auto; background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); overflow: hidden;">
+    <div style="background: linear-gradient(90deg, #e1251b, #ff4e4e); padding: 12px 20px; color: white; font-size: 18px; font-weight: bold; display: flex; align-items: center;">
+        <span style="margin-right: 10px;">🤖</span> 谷粒智能导购助手
+    </div>
+
+    <div id="ai_chat_box" style="height: 350px; padding: 20px; overflow-y: auto; background: #f4f5f7; display: flex; flex-direction: column; gap: 15px;">
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <div style="width: 38px; height: 38px; background: #e1251b; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; flex-shrink: 0;">AI</div>
+            <div style="background: white; padding: 12px 18px; border-radius: 0 10px 10px 10px; border: 1px solid #e8e8e8; max-width: 80%; line-height: 1.6; font-size: 14px; color: #333; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                您好！我是谷粒商城智能导购。您可以问我任何关于商品的问题，例如：<br>
+                <a href="javascript:void(0);" onclick="$('#ai_input_text').val('你们有华为手机卖吗');$('#ai_send_btn').click();" style="color: #e1251b; text-decoration: underline;">“你们有华为手机卖吗？”</a>
+            </div>
+        </div>
+    </div>
+
+    <div style="padding: 15px; background: #fff; border-top: 1px solid #eee; display: flex; gap: 10px;">
+        <input type="text" id="ai_input_text" placeholder="向智能导购提问，例如：帮我找一款2000元左右的手机..." style="flex: 1; padding: 12px 15px; border: 1px solid #ccc; border-radius: 4px; outline: none; font-size: 14px; transition: border-color 0.3s;">
+        <button id="ai_send_btn" style="background: #e1251b; color: white; border: none; padding: 0 30px; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; transition: background 0.3s;">发 送</button>
+    </div>
+</div>
 </body>
 <script type="text/javascript" src="/static/index/js/jquery-3.1.1.min.js"></script>
 
@@ -583,6 +603,88 @@
 <script type="text/javascript" src="/static/index/js/catalogLoader.js"></script>
 
 <script type="text/javascript">
+    // === AI 智能导购前端交互逻辑 ===
+    $(function() {
+        function sendAiMessage() {
+            var msg = $.trim($("#ai_input_text").val());
+            if (!msg) {
+                alert("请输入您的问题！");
+                return;
+            }
+
+            var chatBox = $("#ai_chat_box");
+
+            // 1. 把用户的问题显示在右侧
+            var userHtml = '<div style="display: flex; align-items: flex-start; gap: 10px; justify-content: flex-end;">' +
+                '<div style="background: #e1f3d8; padding: 12px 18px; border-radius: 10px 0 10px 10px; border: 1px solid #c2e7b0; max-width: 80%; line-height: 1.6; font-size: 14px; color: #333; word-break: break-all;">' + msg + '</div>' +
+                '<div style="width: 38px; height: 38px; background: #666; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; flex-shrink: 0;">Me</div>' +
+                '</div>';
+            chatBox.append(userHtml);
+
+            // 清空输入框并让聊天框滚动到底部
+            $("#ai_input_text").val("");
+            chatBox.scrollTop(chatBox[0].scrollHeight);
+
+            // 2. 显示 AI 正在思考的 loading 状态
+            var loadingId = "loading_" + new Date().getTime();
+            var loadingHtml = '<div id="' + loadingId + '" style="display: flex; align-items: flex-start; gap: 10px;">' +
+                '<div style="width: 38px; height: 38px; background: #e1251b; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; flex-shrink: 0;">AI</div>' +
+                '<div style="background: white; padding: 12px 18px; border-radius: 0 10px 10px 10px; border: 1px solid #eee; max-width: 80%; line-height: 1.6; font-size: 14px; color: #999;">正在努力查询中，请稍候...</div>' +
+                '</div>';
+            chatBox.append(loadingHtml);
+            chatBox.scrollTop(chatBox[0].scrollHeight);
+
+            // 3. 发送 AJAX 请求到后端的 Agent 接口
+            $.ajax({
+                url: "http://localhost:10000/api/product/ai/chat", // 确保这个端口号和你后端的端口一致
+                type: "GET",
+                data: { msg: msg },
+                success: function(res) {
+                    // 移除思考中状态
+                    $("#" + loadingId).remove();
+
+                    // 假设后端直接返回字符串格式的回复
+                    var aiResponse = res;
+
+                    // 将AI回复追加到聊天框
+                    var aiHtml = '<div style="display: flex; align-items: flex-start; gap: 10px;">' +
+                        '<div style="width: 38px; height: 38px; background: #e1251b; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; flex-shrink: 0;">AI</div>' +
+                        '<div style="background: white; padding: 12px 18px; border-radius: 0 10px 10px 10px; border: 1px solid #e8e8e8; max-width: 80%; line-height: 1.6; font-size: 14px; color: #333; box-shadow: 0 2px 4px rgba(0,0,0,0.02); word-break: break-all;">' + aiResponse + '</div>' +
+                        '</div>';
+                    chatBox.append(aiHtml);
+                    chatBox.scrollTop(chatBox[0].scrollHeight);
+                },
+                error: function() {
+                    $("#" + loadingId).remove();
+                    var errorHtml = '<div style="display: flex; align-items: flex-start; gap: 10px;">' +
+                        '<div style="width: 38px; height: 38px; background: #e1251b; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; flex-shrink: 0;">AI</div>' +
+                        '<div style="background: white; padding: 12px 18px; border-radius: 0 10px 10px 10px; border: 1px solid #f5c6cb; background-color: #f8d7da; max-width: 80%; line-height: 1.6; font-size: 14px; color: #721c24;">网络请求失败，请检查后端服务是否正常运行，或是否存在跨域问题（需要在后端Controller加上 @CrossOrigin 注解）。</div>' +
+                        '</div>';
+                    chatBox.append(errorHtml);
+                    chatBox.scrollTop(chatBox[0].scrollHeight);
+                }
+            });
+        }
+
+        // 绑定发送按钮点击事件
+        $("#ai_send_btn").click(function() {
+            sendAiMessage();
+        });
+
+        // 绑定输入框回车发送事件
+        $("#ai_input_text").keypress(function(e) {
+            if (e.which == 13) { // 13 代表 Enter 键
+                sendAiMessage();
+            }
+        });
+
+        // 当输入框获取焦点时，改变边框颜色提升体验
+        $("#ai_input_text").focus(function(){
+            $(this).css("border-color", "#e1251b");
+        }).blur(function(){
+            $(this).css("border-color", "#ccc");
+        });
+    });
     function search() {
         var keyword = $("#searchText").val();
         // 建议加上 http:// 确保跳转正确
