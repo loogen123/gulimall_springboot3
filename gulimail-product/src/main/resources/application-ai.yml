@@ -1,0 +1,25 @@
+# AI智能客服配置 - 本地开发环境默认配置
+# 生产环境请使用Nacos配置中心进行配置
+
+gulimail:
+  ai:
+    enabled: true
+    model: deepseek-chat
+    temperature: 0.7
+    max-tokens: 1000
+    timeout-seconds: 30
+    max-retries: 3
+  
+  thread:
+    core-size: 20
+    max-size: 200
+    keep-alive-time: 10
+    queue-capacity: 1000
+
+# 日志配置
+logging:
+  level:
+    com.lg.gulimail.product.ai: DEBUG
+    com.lg.gulimail.product.web.AiChatController: DEBUG
+    dev.langchain4j: INFO
+    org.springframework.ai: INFO

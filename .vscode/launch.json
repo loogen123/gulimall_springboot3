@@ -1,0 +1,44 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-GulimailProductApplication<gulimail-product>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.lg.gulimail.product.GulimailProductApplication",
+            "projectName": "gulimail-product",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-GulimailGatewayApplication<gulimail-gateway>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.lg.gulimail.gateway.GulimailGatewayApplication",
+            "projectName": "gulimail-gateway",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-GulimailAuthServerApplication<gulimail-auth-server>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.lg.gulimail.authserver.GulimailAuthServerApplication",
+            "projectName": "gulimail-auth-server",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-GulimailSearchApplication<gulimail-search>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.lg.gulimail.search.GulimailSearchApplication",
+            "projectName": "gulimail-search",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}

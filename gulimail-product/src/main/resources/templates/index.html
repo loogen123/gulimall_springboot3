@@ -10,6 +10,25 @@
     <link rel="stylesheet" href="index/css/GL.css">
     <script src="index/js/jquery-3.1.1.min.js" type="text/javascript" charset="utf-8"></script>
 
+    <style>
+        .markdown-content h1 { font-size: 24px; font-weight: bold; margin: 16px 0 8px 0; color: #333; }
+        .markdown-content h2 { font-size: 20px; font-weight: bold; margin: 14px 0 7px 0; color: #444; }
+        .markdown-content h3 { font-size: 18px; font-weight: bold; margin: 12px 0 6px 0; color: #555; }
+        .markdown-content p { margin: 8px 0; line-height: 1.6; }
+        .markdown-content ul, .markdown-content ol { margin: 8px 0; padding-left: 24px; }
+        .markdown-content li { margin: 4px 0; }
+        .markdown-content code { background: #f4f4f4; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 14px; }
+        .markdown-content pre { background: #f5f5f5; padding: 12px; border-radius: 6px; overflow-x: auto; }
+        .markdown-content pre code { background: none; padding: 0; }
+        .markdown-content strong { font-weight: bold; }
+        .markdown-content em { font-style: italic; }
+        .markdown-content a { color: #e1251b; text-decoration: underline; }
+        .markdown-content blockquote { border-left: 4px solid #e1251b; padding-left: 12px; margin: 8px 0; color: #666; }
+        .markdown-content table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+        .markdown-content th, .markdown-content td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .markdown-content th { background: #f5f5f5; font-weight: bold; }
+    </style>
+
     <script src="index/js/swiper-3.4.2.jquery.min.js" type="text/javascript" charset="utf-8"></script>
 
     <script src="index/js/swiper-3.4.2.min.js"></script>
@@ -577,9 +596,7 @@
     <div id="ai_chat_box" style="height: 350px; padding: 20px; overflow-y: auto; background: #f4f5f7; display: flex; flex-direction: column; gap: 15px;">
         <div style="display: flex; align-items: flex-start; gap: 10px;">
             <div style="width: 38px; height: 38px; background: #e1251b; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; flex-shrink: 0;">AI</div>
-            <div style="background: white; padding: 12px 18px; border-radius: 0 10px 10px 10px; border: 1px solid #e8e8e8; max-width: 80%; line-height: 1.6; font-size: 14px; color: #333; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-                您好！我是谷粒商城智能导购。您可以问我任何关于商品的问题，例如：<br>
-                <a href="javascript:void(0);" onclick="$('#ai_input_text').val('你们有华为手机卖吗');$('#ai_send_btn').click();" style="color: #e1251b; text-decoration: underline;">“你们有华为手机卖吗？”</a>
+            <div class="markdown-content" style="background: white; padding: 12px 18px; border-radius: 0 10px 10px 10px; border: 1px solid #e8e8e8; max-width: 80%; line-height: 1.6; font-size: 14px; color: #333; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
             </div>
         </div>
     </div>
@@ -605,6 +622,30 @@
 <script type="text/javascript">
     // === AI 智能导购前端交互逻辑 ===
     $(function() {
+        function renderMarkdown(text) {
+            if (!text) return text;
+            
+            let result = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            
+            result = result.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            result = result.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            result = result.replace(/^##\s+(.*)$/gm, '<h2>$1</h2>');
+            result = result.replace(/^###\s+(.*)$/gm, '<h3>$1</h3>');
+            result = result.replace(/^---\s*$/gm, '<hr>');
+            result = result.replace(/^-\s+(.*)$/gm, '<li>$1</li>');
+            result = result.replace(/\n\n/g, '</p><p>');
+            result = result.replace(/\n/g, '<br>');
+            
+            if (!result.startsWith('<p>') && !result.startsWith('<h2>') && !result.startsWith('<h3>')) {
+                result = '<p>' + result + '</p>';
+            }
+            
+            return result;
+        }
+
         function sendAiMessage() {
             var msg = $.trim($("#ai_input_text").val());
             if (!msg) {
@@ -625,45 +666,102 @@
             $("#ai_input_text").val("");
             chatBox.scrollTop(chatBox[0].scrollHeight);
 
-            // 2. 显示 AI 正在思考的 loading 状态
-            var loadingId = "loading_" + new Date().getTime();
-            var loadingHtml = '<div id="' + loadingId + '" style="display: flex; align-items: flex-start; gap: 10px;">' +
+            // 2. 创建 AI 回复的占位容器
+            var aiMessageId = "ai_msg_" + new Date().getTime();
+            var aiHtml = '<div id="' + aiMessageId + '" style="display: flex; align-items: flex-start; gap: 10px;">' +
                 '<div style="width: 38px; height: 38px; background: #e1251b; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; flex-shrink: 0;">AI</div>' +
-                '<div style="background: white; padding: 12px 18px; border-radius: 0 10px 10px 10px; border: 1px solid #eee; max-width: 80%; line-height: 1.6; font-size: 14px; color: #999;">正在努力查询中，请稍候...</div>' +
+                '<div class="ai-response-content markdown-content" style="background: white; padding: 12px 18px; border-radius: 0 10px 10px 10px; border: 1px solid #e8e8e8; max-width: 80%; line-height: 1.6; font-size: 14px; color: #333; box-shadow: 0 2px 4px rgba(0,0,0,0.02); word-break: break-all;">' +
+                '<span class="typing-indicator" style="color: #999;">正在思考中...</span>' +
+                '</div>' +
                 '</div>';
-            chatBox.append(loadingHtml);
+            chatBox.append(aiHtml);
             chatBox.scrollTop(chatBox[0].scrollHeight);
 
-            // 3. 发送 AJAX 请求到后端的 Agent 接口
-            $.ajax({
-                url: "http://localhost:10000/api/product/ai/chat", // 确保这个端口号和你后端的端口一致
-                type: "GET",
-                data: { msg: msg },
-                success: function(res) {
-                    // 移除思考中状态
-                    $("#" + loadingId).remove();
+            // 3. 使用 SSE 连接进行流式输出
+            try {
+                var eventSource = new EventSource("http://localhost:10000/api/product/ai/chat/stream?msg=" + encodeURIComponent(msg));
+                var aiContent = "";
+                var isFirstChunk = true;
 
-                    // 假设后端直接返回字符串格式的回复
-                    var aiResponse = res;
+                eventSource.onmessage = function(event) {
+                    var chunk = event.data;
+                    
+                    if (chunk === "[DONE]") {
+                        var aiContentDiv = $("#" + aiMessageId + " .ai-response-content");
+                        aiContentDiv.html(renderMarkdown(aiContent));
+                        chatBox.scrollTop(chatBox[0].scrollHeight);
+                        eventSource.close();
+                        return;
+                    }
+                    
+                    aiContent += chunk;
+                    
+                    var aiContentDiv = $("#" + aiMessageId + " .ai-response-content");
+                    if (isFirstChunk) {
+                        aiContentDiv.html("");
+                        isFirstChunk = false;
+                    }
+                    
+                    var tempDisplay = aiContent
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/\n/g, '<br>');
+                    
+                    aiContentDiv.html(tempDisplay);
+                    chatBox.scrollTop(chatBox[0].scrollHeight);
+                };
 
-                    // 将AI回复追加到聊天框
-                    var aiHtml = '<div style="display: flex; align-items: flex-start; gap: 10px;">' +
-                        '<div style="width: 38px; height: 38px; background: #e1251b; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; flex-shrink: 0;">AI</div>' +
-                        '<div style="background: white; padding: 12px 18px; border-radius: 0 10px 10px 10px; border: 1px solid #e8e8e8; max-width: 80%; line-height: 1.6; font-size: 14px; color: #333; box-shadow: 0 2px 4px rgba(0,0,0,0.02); word-break: break-all;">' + aiResponse + '</div>' +
-                        '</div>';
-                    chatBox.append(aiHtml);
-                    chatBox.scrollTop(chatBox[0].scrollHeight);
-                },
-                error: function() {
-                    $("#" + loadingId).remove();
-                    var errorHtml = '<div style="display: flex; align-items: flex-start; gap: 10px;">' +
-                        '<div style="width: 38px; height: 38px; background: #e1251b; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; flex-shrink: 0;">AI</div>' +
-                        '<div style="background: white; padding: 12px 18px; border-radius: 0 10px 10px 10px; border: 1px solid #f5c6cb; background-color: #f8d7da; max-width: 80%; line-height: 1.6; font-size: 14px; color: #721c24;">网络请求失败，请检查后端服务是否正常运行，或是否存在跨域问题（需要在后端Controller加上 @CrossOrigin 注解）。</div>' +
-                        '</div>';
-                    chatBox.append(errorHtml);
-                    chatBox.scrollTop(chatBox[0].scrollHeight);
-                }
-            });
+                eventSource.onerror = function(error) {
+                    eventSource.close();
+                    
+                    var aiContentDiv = $("#" + aiMessageId + " .ai-response-content");
+                    if (aiContentDiv.find(".typing-indicator").length > 0) {
+                        aiContentDiv.html('<span style="color: #721c24;">连接失败，正在尝试备用方案...</span>');
+                        
+                        $.ajax({
+                            url: "http://localhost:10000/api/product/ai/chat",
+                            type: "GET",
+                            data: { msg: msg },
+                            success: function(res) {
+                                aiContentDiv.html(renderMarkdown(res));
+                                chatBox.scrollTop(chatBox[0].scrollHeight);
+                            },
+                            error: function() {
+                                aiContentDiv.html('<span style="color: #721c24;">网络请求失败，请检查后端服务是否正常运行。</span>');
+                            }
+                        });
+                    }
+                };
+            } catch (e) {
+                
+                // 降级到普通 AJAX 请求
+                var aiContentDiv = $("#" + aiMessageId + " .ai-response-content");
+                $.ajax({
+                    url: "http://localhost:10000/api/product/ai/chat",
+                    type: "GET",
+                    data: { msg: msg },
+                    success: function(res) {
+                        aiContentDiv.html(renderMarkdown(res));
+                        chatBox.scrollTop(chatBox[0].scrollHeight);
+                    },
+                    error: function() {
+                        aiContentDiv.html('<span style="color: #721c24;">网络请求失败，请检查后端服务是否正常运行。</span>');
+                    }
+                });
+            }
+        }
+
+        var welcomeMarkdown = "## 👋 欢迎使用谷粒智能导购！\n\n" +
+            "您好！我是谷粒商城智能导购。您可以问我任何关于商品的问题，例如：\n\n" +
+            "- **商品查询**：\"你们有华为手机卖吗？\"\n" +
+            "- **价格筛选**：\"帮我找1000-2000元的手机\"\n" +
+            "- **分类浏览**：\"有哪些商品分类？\"\n" +
+            "- **热门推荐**：\"推荐一些热门商品\"\n\n";
+        
+        var welcomeDiv = $("#ai_chat_box .markdown-content").first();
+        if (welcomeDiv.length > 0) {
+            welcomeDiv.html(renderMarkdown(welcomeMarkdown));
         }
 
         // 绑定发送按钮点击事件
