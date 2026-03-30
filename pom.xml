@@ -23,6 +23,7 @@
         <module>gulimail-auth-server</module>
         <module>gulimail-cart</module>
         <module>gulimail-seckill</module>
+        <module>gulimail-ai</module>
     </modules>
     <properties>
         <maven.compiler.source>17</maven.compiler.source>

@@ -16,17 +16,18 @@
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
         </processorPath>
-        <module name="gulimail-cart" />
-        <module name="gulimail-common" />
         <module name="gulimail-member" />
-        <module name="gulimail-seckill" />
-        <module name="gulimail-product" />
+        <module name="gulimail-ai" />
         <module name="gulimail-auth-server" />
-        <module name="gulimail-coupon" />
-        <module name="renren-fast" />
         <module name="gulimail-order" />
         <module name="gulimail-ware" />
         <module name="gulimail-search" />
+        <module name="gulimail-cart" />
+        <module name="gulimail-common" />
+        <module name="gulimail-seckill" />
+        <module name="gulimail-product" />
+        <module name="gulimail-coupon" />
+        <module name="renren-fast" />
         <module name="gulimail-third-party" />
       </profile>
     </annotationProcessing>

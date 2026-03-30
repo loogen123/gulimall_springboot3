@@ -1,0 +1,11 @@
+D:\GitProgram\gulimail\gulimail-ai\src\main\java\com\lg\gulimail\ai\config\FeignConfig.java
+D:\GitProgram\gulimail\gulimail-ai\src\main\java\com\lg\gulimail\ai\config\GulimailSessionConfig.java
+D:\GitProgram\gulimail\gulimail-ai\src\main\java\com\lg\gulimail\ai\config\MallAssistantConfig.java
+D:\GitProgram\gulimail\gulimail-ai\src\main\java\com\lg\gulimail\ai\controller\AiChatController.java
+D:\GitProgram\gulimail\gulimail-ai\src\main\java\com\lg\gulimail\ai\feign\OrderFeignService.java
+D:\GitProgram\gulimail\gulimail-ai\src\main\java\com\lg\gulimail\ai\feign\ProductFeignService.java
+D:\GitProgram\gulimail\gulimail-ai\src\main\java\com\lg\gulimail\ai\feign\SeckillFeignService.java
+D:\GitProgram\gulimail\gulimail-ai\src\main\java\com\lg\gulimail\ai\feign\WareFeignService.java
+D:\GitProgram\gulimail\gulimail-ai\src\main\java\com\lg\gulimail\ai\GulimailAiApplication.java
+D:\GitProgram\gulimail\gulimail-ai\src\main\java\com\lg\gulimail\ai\service\MallAssistant.java
+D:\GitProgram\gulimail\gulimail-ai\src\main\java\com\lg\gulimail\ai\service\ProductAiTools.java

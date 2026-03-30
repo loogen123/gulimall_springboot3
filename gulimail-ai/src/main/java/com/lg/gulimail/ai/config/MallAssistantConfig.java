@@ -1,7 +1,7 @@
-package com.lg.gulimail.product.config;
+package com.lg.gulimail.ai.config;
 
-import com.lg.gulimail.product.ai.MallAssistant;
-import com.lg.gulimail.product.ai.ProductAiTools;
+import com.lg.gulimail.ai.service.MallAssistant;
+import com.lg.gulimail.ai.service.ProductAiTools;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;

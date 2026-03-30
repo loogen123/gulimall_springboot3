@@ -55,6 +55,15 @@ public class SkuInfoController {
     }
 
     /**
+     * AI及其他服务获取完整商品详情（包含图片、属性等）
+     */
+    @RequestMapping("/api/item/{skuId}")
+    public R getSkuItem(@PathVariable("skuId") Long skuId){
+        com.lg.gulimail.product.vo.SkuItemVo itemVo = skuInfoService.item(skuId);
+        return R.ok().put("data", itemVo);
+    }
+
+    /**
      * 保存
      */
     @RequestMapping("/save")

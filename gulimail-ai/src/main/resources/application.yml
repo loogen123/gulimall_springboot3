@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: gulimail-ai
+  config:
+    import:
+      - optional:nacos:gulimail-ai.yaml?server-addr=127.0.0.1:8848&namespace=60506194-2d6f-4685-82e7-a57b9bd9000c&refreshEnabled=true
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+  session:
+    store-type: redis
+  data:
+    redis:
+      host: 192.168.10.101
+      port: 6379
+
+server:
+  port: 14000
+
+logging:
+  level:
+    com.lg.gulimail: debug

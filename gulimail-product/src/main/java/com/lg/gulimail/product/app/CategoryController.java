@@ -38,6 +38,15 @@ public class CategoryController {
 
 
     /**
+     * 获取所有一级分类
+     */
+    @RequestMapping("/api/level1")
+    public R getLevel1Categories() {
+        List<CategoryEntity> level1Categorys = categoryService.getLevel1Categorys();
+        return R.ok().put("data", level1Categorys);
+    }
+
+    /**
      * 信息
      */
     @RequestMapping("/info/{catId}")

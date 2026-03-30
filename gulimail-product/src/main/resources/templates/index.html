@@ -677,24 +677,27 @@
             chatBox.append(aiHtml);
             chatBox.scrollTop(chatBox[0].scrollHeight);
 
-            // 3. 使用 SSE 连接进行流式输出
-            try {
-                var eventSource = new EventSource("http://localhost:10000/api/product/ai/chat/stream?msg=" + encodeURIComponent(msg));
-                var aiContent = "";
-                var isFirstChunk = true;
+        // 3. 使用 SSE 连接进行流式输出
+        try {
+            // 通过网关路由到独立的 AI 微服务 (这里必须使用与主站相同的域名，才能带上Cookie)
+            // 如果你的主站是 http://gulimail.com，就用 http://gulimail.com/api/ai/chat/stream
+            var baseUrl = window.location.origin; // 自动获取当前域名（比如 http://gulimail.com）
+            var url = baseUrl + "/api/ai/chat/stream?msg=" + encodeURIComponent(msg);
+            console.log("正在连接 SSE:", url);
+            var eventSource = new EventSource(url, { withCredentials: true });
+            
+            // 前端伪流式队列：解决后端大块吐出数据时的打字机效果
+            var aiContent = "";
+            var isFirstChunk = true;
+            var charQueue = []; // 字符队列
+            var isTyping = false; // 是否正在打字
+            var typingTimer = null;
 
-                eventSource.onmessage = function(event) {
-                    var chunk = event.data;
-                    
-                    if (chunk === "[DONE]") {
-                        var aiContentDiv = $("#" + aiMessageId + " .ai-response-content");
-                        aiContentDiv.html(renderMarkdown(aiContent));
-                        chatBox.scrollTop(chatBox[0].scrollHeight);
-                        eventSource.close();
-                        return;
-                    }
-                    
-                    aiContent += chunk;
+            // 打字机渲染函数
+            function typeNextChar() {
+                if (charQueue.length > 0) {
+                    isTyping = true;
+                    aiContent += charQueue.shift();
                     
                     var aiContentDiv = $("#" + aiMessageId + " .ai-response-content");
                     if (isFirstChunk) {
@@ -710,37 +713,93 @@
                     
                     aiContentDiv.html(tempDisplay);
                     chatBox.scrollTop(chatBox[0].scrollHeight);
-                };
-
-                eventSource.onerror = function(error) {
-                    eventSource.close();
                     
-                    var aiContentDiv = $("#" + aiMessageId + " .ai-response-content");
-                    if (aiContentDiv.find(".typing-indicator").length > 0) {
-                        aiContentDiv.html('<span style="color: #721c24;">连接失败，正在尝试备用方案...</span>');
-                        
-                        $.ajax({
-                            url: "http://localhost:10000/api/product/ai/chat",
-                            type: "GET",
-                            data: { msg: msg },
-                            success: function(res) {
-                                aiContentDiv.html(renderMarkdown(res));
-                                chatBox.scrollTop(chatBox[0].scrollHeight);
-                            },
-                            error: function() {
-                                aiContentDiv.html('<span style="color: #721c24;">网络请求失败，请检查后端服务是否正常运行。</span>');
-                            }
-                        });
+                    // 根据队列长度动态调整打字速度（积压多就打快点，积压少就慢点）
+                    var speed = charQueue.length > 50 ? 5 : 20; 
+                    typingTimer = setTimeout(typeNextChar, speed);
+                } else {
+                    isTyping = false;
+                }
+            }
+
+            eventSource.onmessage = function(event) {
+                var chunk = event.data;
+                
+                if (chunk === "[DONE]") {
+                    // 确保打完最后一个字再关闭和渲染 markdown
+                    var checkFinishInterval = setInterval(function() {
+                        if (charQueue.length === 0) {
+                            clearInterval(checkFinishInterval);
+                            var aiContentDiv = $("#" + aiMessageId + " .ai-response-content");
+                            aiContentDiv.html(renderMarkdown(aiContent));
+                            chatBox.scrollTop(chatBox[0].scrollHeight);
+                            eventSource.close();
+                        }
+                    }, 100);
+                    return;
+                }
+                
+                // 将收到的新文本拆成字符放入队列
+                if (chunk && chunk.length > 0) {
+                    for (var i = 0; i < chunk.length; i++) {
+                        charQueue.push(chunk.charAt(i));
                     }
-                };
+                    // 如果当前没在打字，启动打字机
+                    if (!isTyping) {
+                        typeNextChar();
+                    }
+                }
+            };
+
+            eventSource.onerror = function(error) {
+                console.error("SSE连接错误或结束", error);
+                
+                // 确保打完最后一个字再关闭
+                var checkFinishInterval = setInterval(function() {
+                    if (charQueue.length === 0) {
+                        clearInterval(checkFinishInterval);
+                        eventSource.close();
+                        
+                        var aiContentDiv = $("#" + aiMessageId + " .ai-response-content");
+                        if (aiContentDiv.find(".typing-indicator").length > 0) {
+                            aiContentDiv.html('<span style="color: #721c24;">连接失败，正在尝试备用方案...</span>');
+                            
+                            $.ajax({
+                                url: "http://localhost:10000/api/product/ai/chat",
+                                type: "GET",
+                                data: { 
+                                    msg: msg,
+                                    clientCookie: getCookieString() 
+                                },
+                                xhrFields: {
+                                    withCredentials: true
+                                },
+                                success: function(res) {
+                                    aiContentDiv.html(renderMarkdown(res));
+                                    chatBox.scrollTop(chatBox[0].scrollHeight);
+                                },
+                                error: function() {
+                                    aiContentDiv.html('<span style="color: #721c24;">网络请求失败，请检查后端服务是否正常运行。</span>');
+                                }
+                            });
+                        }
+                    }
+                }, 100);
+            };
             } catch (e) {
                 
                 // 降级到普通 AJAX 请求
                 var aiContentDiv = $("#" + aiMessageId + " .ai-response-content");
                 $.ajax({
-                    url: "http://localhost:10000/api/product/ai/chat",
+                    url: "/api/product/ai/chat",
                     type: "GET",
-                    data: { msg: msg },
+                    data: { 
+                        msg: msg,
+                        clientCookie: getCookieString() 
+                    },
+                    xhrFields: {
+                        withCredentials: true
+                    },
                     success: function(res) {
                         aiContentDiv.html(renderMarkdown(res));
                         chatBox.scrollTop(chatBox[0].scrollHeight);

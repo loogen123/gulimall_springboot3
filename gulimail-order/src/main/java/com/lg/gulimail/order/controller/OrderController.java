@@ -26,6 +26,21 @@ public class OrderController {
     private OrderService orderService;
 
     /**
+     * AI查询当前用户的订单列表（供微服务内部Feign调用）
+     */
+    @PostMapping("/listWithItem")
+    public R listWithItem(@RequestBody Map<String, Object> params){
+        try {
+            // 如果内部调用没有传递用户信息，这里可能会抛出异常
+            PageUtils page = orderService.queryPageWithItem(params);
+            return R.ok().put("page", page);
+        } catch (Exception e) {
+            // 捕获异常，比如未登录时 LoginUserInterceptor.loginUser.get() 可能返回 null
+            return R.error(401, "未登录或获取用户信息失败");
+        }
+    }
+
+    /**
      * 列表
      */
     @RequestMapping("/list")

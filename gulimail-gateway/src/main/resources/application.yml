@@ -83,7 +83,15 @@ spring:
           filters:
             - RewritePath=/api/(?<segment>.*), /$\{segment}
 
-        # 12. 人人开源管理后台 (兜底所有的 /api 请求)
+        # 12. AI客服 API
+        - id: ai_route
+          uri: lb://gulimail-ai
+          predicates:
+            - Path=/api/ai/**
+          filters:
+            - RewritePath=/api/ai/(?<segment>.*), /api/ai/$\{segment}
+
+        # 13. 人人开源管理后台 (兜底所有的 /api 请求)
         - id: admin_route
           uri: lb://renren-fast
           predicates:
