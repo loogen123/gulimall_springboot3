@@ -2,6 +2,7 @@ package com.lg.gulimail.ai.feign;
 
 import com.lg.common.utils.R;
 import com.lg.gulimail.ai.config.FeignConfig;
+import com.lg.gulimail.ai.feign.fallback.OrderFeignFallback;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -11,7 +12,7 @@ import java.util.Map;
 /**
  * 订单微服务Feign接口
  */
-@FeignClient(value = "gulimail-order", configuration = FeignConfig.class)
+@FeignClient(value = "gulimail-order", configuration = FeignConfig.class, fallback = OrderFeignFallback.class)
 public interface OrderFeignService {
 
     /**

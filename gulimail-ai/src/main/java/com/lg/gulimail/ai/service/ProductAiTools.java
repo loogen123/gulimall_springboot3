@@ -8,6 +8,7 @@ import com.lg.gulimail.ai.feign.ProductFeignService;
 import com.alibaba.fastjson.JSON;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.P;
+import feign.FeignException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +41,9 @@ public class ProductAiTools {
 
     @Tool("Get detailed information of a specific product by its skuId.")
     public String getSkuDetails(@P("The unique ID of the SKU to get details for") Long skuId) {
+        if (skuId == null) {
+            return "请输入有效的商品ID";
+        }
         logger.info("AI查询商品详情，skuId：{}", skuId);
         try {
             R r = productFeignService.getSkuItem(skuId);
@@ -47,14 +51,18 @@ public class ProductAiTools {
                 logger.debug("商品详情查询成功，skuId：{}", skuId);
                 return JSON.toJSONString(r.get("data"));
             }
-            return "未找到该商品的详细信息";
+            return "未找到ID为 " + skuId + " 的商品详细信息";
         } catch (Exception e) {
             logger.error("查询商品详情异常，skuId：{}", skuId, e);
-            return DEFAULT_ERROR_MESSAGE;
+            return "查询商品详情失败，请稍后再试";
         }
     }
+
     @Tool("Check if a specific product has stock by its skuId.")
     public String checkSkuStock(@P("The unique ID of the SKU to check stock for") Long skuId) {
+        if (skuId == null) {
+            return "请输入有效的商品ID";
+        }
         logger.info("AI查询商品库存，skuId：{}", skuId);
         try {
             R r = wareFeignService.getSkusHasStock(Arrays.asList(skuId));
@@ -71,6 +79,9 @@ public class ProductAiTools {
 
     @Tool("Check if a specific product has active seckill (flash sale) promotion by its skuId.")
     public String checkSkuSeckill(@P("The unique ID of the SKU to check seckill promotion for") Long skuId) {
+        if (skuId == null) {
+            return "请输入有效的商品ID";
+        }
         logger.info("AI查询商品秒杀信息，skuId：{}", skuId);
         try {
             R r = seckillFeignService.getSkuSeckillInfo(skuId);
@@ -93,42 +104,33 @@ public class ProductAiTools {
             params.put("page", "1");
             params.put("limit", "10");
             
-            String cookie = com.lg.gulimail.ai.config.FeignConfig.USER_COOKIE_THREAD_LOCAL.get();
-            
-            // 关键兜底：解决 LangChain4j 底层 OkHttp 异步线程池导致 InheritableThreadLocal 失效的问题！
-            if (cookie == null || cookie.isEmpty()) {
-                cookie = com.lg.gulimail.ai.controller.AiChatController.GLOBAL_LAST_COOKIE;
-                logger.warn("【AI工具执行】ThreadLocal 中未找到 Cookie（因为线程池复用丢失了上下文），使用全局兜底 Cookie: {}", cookie);
-                if (cookie != null) {
-                    com.lg.gulimail.ai.config.FeignConfig.USER_COOKIE_THREAD_LOCAL.set(cookie);
-                }
-            } else {
-                logger.info("【AI工具执行】成功从 ThreadLocal 获取到 Cookie: {}", cookie);
-            }
-
-            logger.info("当前执行工具的线程：{}", Thread.currentThread().getName());
-            
-            // 注意：这要求当前 AI 聊天的请求上下文中必须带有用户的登录 Token，
-            // 并且需要在 Feign 配置了 RequestInterceptor 来传递这个 Token 到 order 服务。
-            logger.info("准备调用 orderFeignService.listWithItem...");
             R r = orderFeignService.listWithItem(params);
-            logger.info("调用 orderFeignService.listWithItem 完成，返回码：{}", r.getCode());
-            
             if (r.getCode() == 0) {
-                Object page = r.get("page");
-                logger.debug("订单列表查询成功");
-                return "这是您的最近10条订单记录：" + JSON.toJSONString(page) + 
-                       "\n(订单状态: 0=待付款, 1=已付款, 2=已发货, 3=已完成, 4=已取消)";
+                Object data = r.get("page");
+                if (data == null) return "您还没有任何订单记录";
+                return "您的订单列表：" + JSON.toJSONString(data);
+            } else if (r.getCode() == 503) {
+                // 捕获降级后的错误信息
+                return "订单服务目前压力较大或正在维护中，小助手暂时无法为您查询，请稍后再试。";
             }
-            return "无法获取订单信息，可能是您尚未登录或登录已过期。";
+            return "获取订单列表失败，请稍后再试";
+        } catch (FeignException e) {
+            if (e.status() == 401) {
+                return "您尚未登录，请先在商城首页登录后再查询订单";
+            }
+            logger.error("查询用户订单列表异常 (Feign)", e);
+            return DEFAULT_ERROR_MESSAGE;
         } catch (Exception e) {
             logger.error("查询用户订单列表异常", e);
-            return "订单系统暂时不可用或您尚未登录，请确保您已登录并在页面中重试。";
+            return DEFAULT_ERROR_MESSAGE;
         }
     }
 
     @Tool("Search products by keyword.")
     public String searchSkuInfo(@P("The keyword to search for products") String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return "请输入搜索关键词";
+        }
         logger.info("AI查询商品，关键词：{}", keyword);
 
         try {
@@ -147,11 +149,11 @@ public class ProductAiTools {
             }
 
             logger.info("未找到关键词'{}'的商品", keyword);
-            return NO_DATA_MESSAGE;
+            return "抱歉，没有找到与“" + keyword + "”相关的商品";
 
         } catch (Exception e) {
             logger.error("商品查询异常，关键词：{}", keyword, e);
-            return DEFAULT_ERROR_MESSAGE;
+            return "搜索服务暂时不可用，请稍后再试";
         }
     }
 

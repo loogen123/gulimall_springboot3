@@ -27,3 +27,7 @@ mvnw.cmd
 # OS files
 .DS_Store
 Thumbs.db
+
+# Secure config
+**/application-secure.yml
+**/secure/

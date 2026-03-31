@@ -2,6 +2,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "GulimailAiApplication",
+            "request": "launch",
+            "mainClass": "com.lg.gulimail.ai.GulimailAiApplication",
+            "projectName": "gulimail-ai"
+        },
+        {
+            "type": "java",
             "name": "Spring Boot-GulimailProductApplication<gulimail-product>",
             "request": "launch",
             "cwd": "${workspaceFolder}",

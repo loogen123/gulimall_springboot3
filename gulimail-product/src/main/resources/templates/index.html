@@ -680,9 +680,9 @@
         // 3. 使用 SSE 连接进行流式输出
         try {
             // 通过网关路由到独立的 AI 微服务 (这里必须使用与主站相同的域名，才能带上Cookie)
-            // 如果你的主站是 http://gulimail.com，就用 http://gulimail.com/api/ai/chat/stream
+            // 后端接口已升级为 v1 版本: /api/ai/v1/chat/stream
             var baseUrl = window.location.origin; // 自动获取当前域名（比如 http://gulimail.com）
-            var url = baseUrl + "/api/ai/chat/stream?msg=" + encodeURIComponent(msg);
+            var url = baseUrl + "/api/ai/v1/chat/stream?msg=" + encodeURIComponent(msg) + "&clientCookie=" + encodeURIComponent(document.cookie);
             console.log("正在连接 SSE:", url);
             var eventSource = new EventSource(url, { withCredentials: true });
             
@@ -765,11 +765,10 @@
                             aiContentDiv.html('<span style="color: #721c24;">连接失败，正在尝试备用方案...</span>');
                             
                             $.ajax({
-                                url: "http://localhost:10000/api/product/ai/chat",
+                                url: "/api/ai/v1/chat/stream",
                                 type: "GET",
                                 data: { 
-                                    msg: msg,
-                                    clientCookie: getCookieString() 
+                                    msg: msg
                                 },
                                 xhrFields: {
                                     withCredentials: true
@@ -791,11 +790,10 @@
                 // 降级到普通 AJAX 请求
                 var aiContentDiv = $("#" + aiMessageId + " .ai-response-content");
                 $.ajax({
-                    url: "/api/product/ai/chat",
+                    url: "/api/ai/v1/chat/stream",
                     type: "GET",
                     data: { 
-                        msg: msg,
-                        clientCookie: getCookieString() 
+                        msg: msg
                     },
                     xhrFields: {
                         withCredentials: true

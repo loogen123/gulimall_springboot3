@@ -8,9 +8,12 @@ import org.springframework.session.data.redis.config.annotation.web.http.EnableR
 
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 
+import org.mybatis.spring.annotation.MapperScan;
+
+@MapperScan("com.lg.gulimail.ai.mapper")
 @EnableDiscoveryClient
 @EnableFeignClients(basePackages = "com.lg.gulimail.ai.feign")
-@SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
+@SpringBootApplication
 @EnableRedisHttpSession
 public class GulimailAiApplication {
     public static void main(String[] args) {

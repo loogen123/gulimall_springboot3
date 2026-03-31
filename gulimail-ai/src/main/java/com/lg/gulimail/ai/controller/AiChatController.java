@@ -13,15 +13,24 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Date;
 import jakarta.servlet.http.HttpServletRequest;
 import com.lg.gulimail.ai.config.FeignConfig;
 import jakarta.servlet.http.HttpSession;
 import com.lg.common.constant.AuthServerConstant;
 import com.lg.common.vo.MemberResponseVo;
 
+import com.lg.gulimail.ai.mapper.AiChatMessageMapper;
+import com.lg.gulimail.ai.mapper.AiChatSessionMapper;
+import com.lg.gulimail.ai.model.entity.AiChatMessageEntity;
+import com.lg.gulimail.ai.model.entity.AiChatSessionEntity;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import java.util.List;
+import java.util.stream.Collectors;
+
 @RestController
-@RequestMapping("/api/ai")
-@CrossOrigin(origins = {"http://gulimail.com", "http://item.gulimail.com", "http://search.gulimail.com", "http://localhost:10000", "http://localhost:12000", "http://localhost:88"}, allowCredentials = "true")
+@RequestMapping("/api/ai/v1")
+@CrossOrigin(origins = {"http://gulimail.com", "http://item.gulimail.com", "http://search.gulimail.com", "http://localhost:10000", "http://localhost:12000", "http://localhost:88", "http://localhost:3000", "http://localhost:5173", "http://localhost:8080", "http://localhost:8001"}, allowCredentials = "true")
 public class AiChatController {
 
     private static final Logger logger = LoggerFactory.getLogger(AiChatController.class);
@@ -30,47 +39,67 @@ public class AiChatController {
     private static final String STREAM_DONE_SIGNAL = "[DONE]";
     private static final long SSE_TIMEOUT = 300000L;
 
-    // 终极兜底方案：存放最近一次请求的 Cookie。
-    // 在单用户/本地测试场景下，这能绝对保证异步线程拿到 Cookie
-    public static volatile String GLOBAL_LAST_COOKIE = null;
-
     @Autowired
     private MallAssistant mallAssistant;
 
-    @GetMapping("/chat")
-    public String chat(@RequestParam("msg") String msg) {
-        logger.info("处理AI普通聊天请求，消息：{}", msg);
+    @Autowired
+    private AiChatSessionMapper sessionMapper;
+
+    @Autowired
+    private AiChatMessageMapper messageMapper;
+
+    @GetMapping("/sessions")
+    public List<AiChatSessionEntity> getSessions(HttpServletRequest request) {
+        MemberResponseVo user = getLoginUser(request);
+        if (user == null) return null;
         
-        try {
-            String response = mallAssistant.chat(msg);
-            logger.debug("AI响应生成完成，消息长度：{}", response.length());
-            return response;
-        } catch (Exception e) {
-            logger.error("AI聊天处理异常，消息：{}", msg, e);
-            return DEFAULT_ERROR_MESSAGE;
+        return sessionMapper.selectList(new QueryWrapper<AiChatSessionEntity>()
+                .eq("user_id", user.getId())
+                .orderByDesc("create_time"));
+    }
+
+    @GetMapping("/sessions/{id}/messages")
+    public List<AiChatMessageEntity> getMessages(@PathVariable("id") Long sessionId, HttpServletRequest request) {
+        MemberResponseVo user = getLoginUser(request);
+        if (user == null) return null;
+
+        // 简单越权校验
+        AiChatSessionEntity session = sessionMapper.selectById(sessionId);
+        if (session == null || !session.getUserId().equals(user.getId())) return null;
+
+        return messageMapper.selectList(new QueryWrapper<AiChatMessageEntity>()
+                .eq("session_id", sessionId)
+                .orderByAsc("create_time"));
+    }
+
+    private MemberResponseVo getLoginUser(HttpServletRequest request) {
+        // 关键修复：显式使用 request.getSession(false)，避免拦截器或逻辑层在未登录时频繁创建匿名 Session
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            return (MemberResponseVo) session.getAttribute(AuthServerConstant.LOGIN_USER);
         }
+        return null;
     }
 
     @GetMapping("/health")
     public String healthCheck() {
-        logger.info("AI服务健康检查");
-        
-        try {
-            String testResponse = mallAssistant.chat("你好");
-            if (testResponse != null && !testResponse.trim().isEmpty()) {
-                return "AI服务运行正常";
-            }
-            return "AI服务响应异常";
-        } catch (Exception e) {
-            logger.error("AI服务健康检查异常", e);
-            return "AI服务异常：" + e.getMessage();
-        }
+        return "AI Service v1 is UP";
     }
 
-    @GetMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter chatStream(@RequestParam("msg") String msg, 
-                                 HttpServletRequest request, 
+    @GetMapping("/chat/stream")
+    public SseEmitter chatStream(@RequestParam("msg") String msg,
+                                 @RequestParam(value = "sessionId", required = false) Long sessionId,
+                                 HttpServletRequest request,
                                  HttpServletResponse response) {
+        
+        // 1. 记录请求进入时的 Session 状态
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            logger.info("【Session诊断】请求进入 - 发现有效SessionID: {}, 创建时间: {}, 最后访问: {}", 
+                session.getId(), new Date(session.getCreationTime()), new Date(session.getLastAccessedTime()));
+        } else {
+            logger.info("【Session诊断】请求进入 - 当前为无状态匿名请求");
+        }
         // 禁用Nginx缓存，解决流式卡顿问题
         response.setHeader("X-Accel-Buffering", "no");
         response.setHeader("Cache-Control", "no-cache");
@@ -78,8 +107,11 @@ public class AiChatController {
         response.setHeader("Content-Type", "text/event-stream; charset=utf-8");
         
         // 允许跨域及携带凭证
-        response.setHeader("Access-Control-Allow-Origin", request.getHeader("Origin"));
-        response.setHeader("Access-Control-Allow-Credentials", "true");
+        String origin = request.getHeader("Origin");
+        if (origin != null) {
+            response.setHeader("Access-Control-Allow-Origin", origin);
+            response.setHeader("Access-Control-Allow-Credentials", "true");
+        }
         
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
         
@@ -110,31 +142,28 @@ public class AiChatController {
         }
         
         // 验证 Spring Session 是否能获取到 (因为刚刚配置了 store-type: redis，此时Session应该是互通的)
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            logger.info("【会话传递】第三步：发现 Spring Session, ID: {}", session.getId());
-            MemberResponseVo user = (MemberResponseVo) session.getAttribute(AuthServerConstant.LOGIN_USER);
-            if (user != null) {
-                logger.info("【会话传递】第三步：成功从 Spring Session 中获取到登录用户：{}", user.getUsername());
-                // 终极杀招：无论前面 Cookie 有没有拿到，只要 Spring Session 认出了用户，
-                // 我们直接硬编码伪造一个合法的 GULISESSION 给 Feign 用（因为 Spring Session 默认就是用 Base64 编码的 session id 作为 Cookie 值）
+        // 核心修改：统一通过 getLoginUser(request) 获取，确保不产生新的 Session
+        MemberResponseVo user = getLoginUser(request);
+        if (user != null) {
+            logger.info("【会话传递】第三步：发现有效 Spring Session 用户：{}", user.getUsername());
+            // 终极杀招：无论前面 Cookie 有没有拿到，只要 Spring Session 认出了用户，
+            // 我们直接硬编码伪造一个合法的 GULISESSION 给 Feign 用（因为 Spring Session 默认就是用 Base64 编码的 session id 作为 Cookie 值）
+            session = request.getSession(false);
+            if (session != null) {
                 String reconstructedCookie = "GULISESSION=" + new String(java.util.Base64.getEncoder().encode(session.getId().getBytes()));
                 if (cookieToUse == null || cookieToUse.isEmpty()) {
                     logger.info("【会话传递】第三步：Header和Cookies都没拿到，但Session存在，使用重构的 Cookie: {}", reconstructedCookie);
                     cookieToUse = reconstructedCookie;
                 }
-            } else {
-                logger.warn("【会话传递】第三步：Session 存在，但里面没有 LOGIN_USER 属性！这说明这是个匿名Session。");
             }
         } else {
-            logger.warn("【会话传递】第三步：request.getSession(false) 返回 null！这说明 Spring Session 根本没有生效，或者前端连 SessionID 都没传过来！");
+            logger.warn("【会话传递】第三步：未发现有效登录 Session，当前为匿名请求。");
         }
 
         // 把最终拿到的 Cookie 存入全局兜底变量中
         if (cookieToUse != null && !cookieToUse.isEmpty()) {
             logger.info("【会话传递】最终决定使用 Cookie：{}", cookieToUse);
             FeignConfig.USER_COOKIE_THREAD_LOCAL.set(cookieToUse);
-            GLOBAL_LAST_COOKIE = cookieToUse;
         } else {
             logger.error("【会话传递】彻底失败：前端没传 Cookie，Spring Session 也没解析到，当前请求是完全匿名的！");
         }
@@ -154,9 +183,11 @@ public class AiChatController {
             // 关键修改：先发送心跳，防止连接被Nginx立即回收
             emitter.send(SseEmitter.event().comment("connection established"));
             
-            // 0.31.0版本兼容的流式输出实现
-            
-            // 捕获LangChain4j可能的初始化异常
+            // 开启流式响应并持久化消息
+            final Long finalSessionId = getOrCreateSession(sessionId, getLoginUser(request));
+            saveMessage(finalSessionId, "user", msg);
+
+            StringBuilder fullAiResponse = new StringBuilder();
             TokenStream tokenStream;
             try {
                 tokenStream = mallAssistant.chatStream(msg);
@@ -166,27 +197,19 @@ public class AiChatController {
                 return emitter;
             }
             
-            // 纯粹流式与分块结合：如果是工具调用返回的超大 Token，后端适当分块发送，避免前端缓冲区瞬间被打爆，
-            // 但不使用长 Thread.sleep 阻塞。前端再结合 JS 队列实现极致平滑。
             tokenStream
                 .onNext(token -> {
-                    // 增强日志：打印Token，监控工具调用
-                    logger.info("Token Received (Length: {}): {}", token != null ? token.length() : 0, token);
-                    
                     if (token != null && !token.isEmpty()) {
+                        fullAiResponse.append(token);
                         try {
                             if (token.length() > 50) {
-                                // 对于特别巨大的 Token (例如查完订单返回的几百字)，切成小块发送，避免单次网络包过大
-                                int chunkSize = 20; // 每次发20个字符
+                                int chunkSize = 20;
                                 for (int i = 0; i < token.length(); i += chunkSize) {
                                     int end = Math.min(token.length(), i + chunkSize);
-                                    String chunk = token.substring(i, end);
-                                    emitter.send(SseEmitter.event().data(chunk));
-                                    // 极短的休眠，给网关和前端缓冲区一点点呼吸的时间，但不至于让用户感觉慢
-                                    Thread.sleep(2); 
+                                    emitter.send(SseEmitter.event().data(token.substring(i, end)));
+                                    Thread.sleep(2);
                                 }
                             } else {
-                                // 正常的短token流式输出
                                 emitter.send(SseEmitter.event().data(token));
                             }
                         } catch (IOException | InterruptedException e) {
@@ -196,34 +219,47 @@ public class AiChatController {
                 })
                 .onComplete(chatResponse -> {
                     try {
-                        logger.debug("AI流式响应完成");
-                        
-                        // 发送完成信号
+                        saveMessage(finalSessionId, "assistant", fullAiResponse.toString());
                         emitter.send(SseEmitter.event().data(STREAM_DONE_SIGNAL));
                         emitter.complete();
                     } catch (IOException e) {
                         logger.error("SSE发送完成信号失败", e);
                         emitter.completeWithError(e);
                     } finally {
-                        // 清理 ThreadLocal，防止内存泄漏和串话
                         FeignConfig.USER_COOKIE_THREAD_LOCAL.remove();
                     }
                 })
                 .onError(error -> {
-                    // 统一异常处理
                     logger.error("LangChain4j 内部处理流时发生异常: ", error);
                     handleStreamError(emitter, new Exception(error), msg);
                     FeignConfig.USER_COOKIE_THREAD_LOCAL.remove();
                 })
-                .start();  // 必须调用start()启动异步请求
+                .start();
             
         } catch (Exception e) {
-            // 统一异常处理
             handleStreamError(emitter, e, msg);
             FeignConfig.USER_COOKIE_THREAD_LOCAL.remove();
         }
 
         return emitter;
+    }
+
+    private Long getOrCreateSession(Long sessionId, MemberResponseVo user) {
+        if (sessionId != null) return sessionId;
+        
+        AiChatSessionEntity session = new AiChatSessionEntity();
+        if (user != null) session.setUserId(user.getId());
+        session.setTitle("新会话");
+        sessionMapper.insert(session);
+        return session.getId();
+    }
+
+    private void saveMessage(Long sessionId, String role, String content) {
+        AiChatMessageEntity message = new AiChatMessageEntity();
+        message.setSessionId(sessionId);
+        message.setRole(role);
+        message.setContent(content);
+        messageMapper.insert(message);
     }
 
     private void handleStreamError(SseEmitter emitter, Exception e, String msg) {

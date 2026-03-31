@@ -15,8 +15,28 @@ spring:
       host: 192.168.10.101
       port: 6379
 
+  datasource:
+    username: root
+    password: root
+    url: jdbc:mysql://192.168.10.101:3306/gulimail_ai?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+mybatis-plus:
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: isDeleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    map-underscore-to-camel-case: true
+
 server:
   port: 14000
+
+feign:
+  sentinel:
+    enabled: true # 开启 Feign 对 Sentinel 的支持
 
 logging:
   level:

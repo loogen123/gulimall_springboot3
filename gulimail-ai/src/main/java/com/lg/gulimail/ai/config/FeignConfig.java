@@ -3,6 +3,7 @@ package com.lg.gulimail.ai.config;
 import feign.Request;
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
+import feign.Retryer;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,6 +21,17 @@ public class FeignConfig {
     public Request.Options options() {
         // 参数说明：连接超时 5秒，读取超时 10秒
         return new Request.Options(5000, 10000);
+    }
+
+    /**
+     * 配置 Feign 重试机制
+     * period: 重试间隔 (100ms)
+     * maxPeriod: 最大重试间隔 (1s)
+     * maxAttempts: 最大重试次数 (3次)
+     */
+    @Bean
+    public Retryer feignRetryer() {
+        return new Retryer.Default(100, 1000, 3);
     }
 
     /**
@@ -54,15 +66,6 @@ public class FeignConfig {
                     }
                 } else {
                     System.out.println("【Feign请求拦截器】未获取到请求上下文，且 ThreadLocal 为空。");
-                    
-                    // 终极必杀技：直接使用 AiChatController 的全局 Cookie 变量（解决线程池深层复用问题）
-                    String globalCookie = com.lg.gulimail.ai.controller.AiChatController.GLOBAL_LAST_COOKIE;
-                    if (globalCookie != null && !globalCookie.isEmpty()) {
-                        System.out.println("【Feign请求拦截器】启用终极兜底，使用全局变量 Cookie: " + globalCookie);
-                        template.header("Cookie", globalCookie);
-                    } else {
-                        System.out.println("【Feign请求拦截器】彻底绝望，连全局变量都没有 Cookie，放弃挣扎。");
-                    }
                 }
             }
         };
