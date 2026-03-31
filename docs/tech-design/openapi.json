@@ -1,0 +1,97 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "GuliMail AI 客服 API",
+    "version": "1.0.0",
+    "description": "基于 LangChain4j 的电商智能助手接口"
+  },
+  "servers": [
+    {
+      "url": "http://gulimail.com/api/ai",
+      "description": "生产环境"
+    },
+    {
+      "url": "http://localhost:88/api/ai",
+      "description": "本地开发环境 (网关转发)"
+    }
+  ],
+  "paths": {
+    "/v1/chat/stream": {
+      "get": {
+        "summary": "流式对话 (SSE)",
+        "parameters": [
+          {
+            "name": "msg",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "用户输入的消息"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE 流",
+            "content": {
+              "text/event-stream": {}
+            }
+          },
+          "401": {
+            "description": "未授权"
+          }
+        }
+      }
+    },
+    "/v1/sessions": {
+      "get": {
+        "summary": "获取会话历史列表",
+        "responses": {
+          "200": {
+            "description": "会话列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Session"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/health": {
+      "get": {
+        "summary": "服务健康检查",
+        "responses": {
+          "200": {
+            "description": "健康状态"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Session": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "title": {
+            "type": "string"
+          },
+          "createTime": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}
