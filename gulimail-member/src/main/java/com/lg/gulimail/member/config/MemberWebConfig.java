@@ -18,6 +18,6 @@ public class MemberWebConfig implements WebMvcConfigurer {
                 .excludePathPatterns("/member/member/oauth2/login")
                 .excludePathPatterns("/member/member/login")
                 .excludePathPatterns("/member/member/register")
-                .excludePathPatterns("/member/memberreceiveaddress/**");
+                .excludePathPatterns("/member/member/internal/**");
     }
 }

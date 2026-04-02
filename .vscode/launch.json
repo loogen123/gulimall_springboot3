@@ -5,7 +5,8 @@
             "name": "GulimailAiApplication",
             "request": "launch",
             "mainClass": "com.lg.gulimail.ai.GulimailAiApplication",
-            "projectName": "gulimail-ai"
+            "projectName": "gulimail-ai",
+            "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=2626 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=gulimail-ai"
         },
         {
             "type": "java",
@@ -15,7 +16,8 @@
             "mainClass": "com.lg.gulimail.product.GulimailProductApplication",
             "projectName": "gulimail-product",
             "args": "",
-            "envFile": "${workspaceFolder}/.env"
+            "envFile": "${workspaceFolder}/.env",
+            "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=5794 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=gulimail-product"
         },
         {
             "type": "java",
@@ -25,7 +27,8 @@
             "mainClass": "com.lg.gulimail.gateway.GulimailGatewayApplication",
             "projectName": "gulimail-gateway",
             "args": "",
-            "envFile": "${workspaceFolder}/.env"
+            "envFile": "${workspaceFolder}/.env",
+            "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=5492 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=gulimail-gateway"
         },
         {
             "type": "java",
@@ -35,7 +38,8 @@
             "mainClass": "com.lg.gulimail.authserver.GulimailAuthServerApplication",
             "projectName": "gulimail-auth-server",
             "args": "",
-            "envFile": "${workspaceFolder}/.env"
+            "envFile": "${workspaceFolder}/.env",
+            "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=9687 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=gulimail-auth-server"
         },
         {
             "type": "java",
@@ -44,6 +48,80 @@
             "cwd": "${workspaceFolder}",
             "mainClass": "com.lg.gulimail.search.GulimailSearchApplication",
             "projectName": "gulimail-search",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-GulimailThirdPartyApplication<gulimail-third-party>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.lg.gulimail.thirdparty.GulimailThirdPartyApplication",
+            "projectName": "gulimail-third-party",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env",
+            "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=5850 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=gulimail-third-party"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-GulimailMemberApplication<gulimail-member>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.lg.gulimail.member.GulimailMemberApplication",
+            "projectName": "gulimail-member",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env",
+            "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=10015 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=gulimail-member"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-GulimailWareApplication<gulimail-ware>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.lg.gulimail.ware.GulimailWareApplication",
+            "projectName": "gulimail-ware",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-GulimailCartApplication<gulimail-cart>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.lg.gulimail.cart.GulimailCartApplication",
+            "projectName": "gulimail-cart",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env",
+            "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=14080 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=gulimail-cart"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-GulimailCouponApplication<gulimail-coupon>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.lg.gulimail.coupon.GulimailCouponApplication",
+            "projectName": "gulimail-coupon",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env",
+            "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=8012 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=gulimail-coupon"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-GulimailSeckillApplication<gulimail-seckill>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.lg.gulimail.seckill.GulimailSeckillApplication",
+            "projectName": "gulimail-seckill",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-GulimailOrderApplication<gulimail-order>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.lg.gulimail.order.GulimailOrderApplication",
+            "projectName": "gulimail-order",
             "args": "",
             "envFile": "${workspaceFolder}/.env"
         }

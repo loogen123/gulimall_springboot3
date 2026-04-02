@@ -26,10 +26,9 @@ public class GulimailSessionConfig {
     @Bean
     public CookieSerializer cookieSerializer() {
         DefaultCookieSerializer serializer = new DefaultCookieSerializer();
-        // 放大作用域到父域名，解决子域共享
         serializer.setDomainName("gulimail.com");
         serializer.setCookieName("GULISESSION");
-        // 显式配置 SameSite 为 Lax
+        serializer.setUseHttpOnlyCookie(true);
         serializer.setSameSite("Lax");
         return serializer;
     }

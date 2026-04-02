@@ -1,10 +1,15 @@
 spring:
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1.0.0
+    baseline-description: "Initial version"
   application:
     name: gulimail-product
   # 【核心修正】必须紧跟在 application 后面，且格式严格
   config:
     import:
-      - nacos:gulimail-product.yaml?server-addr=127.0.0.1:8848&namespace=3531d4a7-97cf-4b4e-bfc1-fe4eec5f2f4e&refreshEnabled=true
+      - nacos:gulimail-product.yml?server-addr=127.0.0.1:8848&namespace=3531d4a7-97cf-4b4e-bfc1-fe4eec5f2f4e&refreshEnabled=true
 
   datasource:
     username: root
@@ -68,12 +73,18 @@ server:
 logging:
   level:
     com.lg.gulimail: debug
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
 
 gulimail:
+  product:
+    session:
+      secure: false
   thread:
     core-size: 20
     max-size: 200
     keep-alive-time: 10
+    queue-capacity: 2000
 
 management:
   zipkin:
@@ -82,3 +93,41 @@ management:
   tracing:
     sampling:
       probability: 1.0
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+xxl:
+  job:
+    admin:
+      addresses: http://192.168.10.101:8080/xxl-job-admin
+    accessToken: default_token
+    executor:
+      appname: gulimail-product-executor
+      port: 9998
+      logpath: ./logs/xxl-job/gulimail-product
+      logretentiondays: 30
+
+seata:
+  tx-service-group: gulimail-product-tx-group
+  service:
+    vgroup-mapping:
+      gulimail-product-tx-group: default
+  registry:
+    type: nacos
+    nacos:
+      server-addr: 127.0.0.1:8848
+      namespace: ""
+      group: SEATA_GROUP
+      application: seata-server
+

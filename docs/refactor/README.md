@@ -9,6 +9,7 @@
 - `progress.md`：进度追踪表（状态/完成度/负责人/实际耗时）
 - `alerts.md`：风险预警面板（按规则手工判定并记录）
 - `gantt.md`：里程碑甘特图（关键节点）
+- `ai-human-collaboration-sop.md`：AI遇外部依赖阻塞时的人机协作SOP（暂停、告知、指令、恢复、交付边界）
 - `logs/project-progress-log.md`：项目级进度日志（由我们持续追加）
 - `templates/`：MR 模板、评审纪要模板、模块重构日志模板
 

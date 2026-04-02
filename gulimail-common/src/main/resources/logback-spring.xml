@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- 1. 引入 Spring Boot 默认配置 -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- 2. 定义自定义转换器 (脱敏) -->
+    <conversionRule conversionWord="msg" converterClass="com.lg.common.utils.LogDesensitizeConverter"/>
+
+    <!-- 3. 定义控制台输出 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <!-- 注入 TraceId, SpanId, 并且对消息使用自定义 msg 脱敏 -->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [${spring.application.name:-},%X{traceId:-},%X{spanId:-}] %msg %n</pattern>
+            <charset>utf8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 4. 根配置：输出到控制台，默认级别 INFO -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+    <!-- 5. 针对项目包开启 DEBUG 级别 -->
+    <logger name="com.lg.gulimail" level="DEBUG"/>
+</configuration>

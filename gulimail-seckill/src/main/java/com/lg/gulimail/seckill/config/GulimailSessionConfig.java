@@ -12,13 +12,15 @@ public class GulimailSessionConfig {
     @Bean
     public CookieSerializer cookieSerializer() {
         DefaultCookieSerializer serializer = new DefaultCookieSerializer();
-        serializer.setCookieName("GULISESSION"); // 名字必须全系统一致
-        serializer.setDomainName("gulimail.com"); // 范围必须是父域
+        serializer.setCookieName("GULISESSION");
+        serializer.setDomainName("gulimail.com");
+        serializer.setUseHttpOnlyCookie(true);
+        serializer.setSameSite("Lax");
         return serializer;
     }
 
     @Bean
     public RedisSerializer<Object> springSessionDefaultRedisSerializer() {
-        return new GenericJackson2JsonRedisSerializer(); // 序列化方式也必须一致
+        return new GenericJackson2JsonRedisSerializer();
     }
 }

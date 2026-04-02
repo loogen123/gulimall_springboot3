@@ -19,17 +19,20 @@ import com.lg.gulimail.ware.feign.SkuInfoFeignService;
 import com.lg.gulimail.ware.service.WareOrderTaskDetailService;
 import com.lg.gulimail.ware.service.WareOrderTaskService;
 import com.lg.gulimail.ware.service.WareSkuService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 
+@Slf4j
 @Service("wareSkuService")
 public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> implements WareSkuService {
     @Autowired
@@ -95,17 +98,25 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
 
     @Override
     public List<SkuHasStockVo> getSkusHasStock(List<Long> skuIds) {
+        if (skuIds == null || skuIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Map<Long, Long> stockMap = baseMapper.getSkusStock(skuIds).stream().collect(Collectors.toMap(
+                item -> ((Number) item.get("sku_id")).longValue(),
+                item -> ((Number) item.get("stock")).longValue()
+        ));
         return skuIds.stream().map(skuId -> {
             SkuHasStockVo vo = new SkuHasStockVo();
-            long count = baseMapper.getSkuStock(skuId);
+            long count = stockMap.getOrDefault(skuId, 0L);
             vo.setSkuId(skuId);
             vo.setHasStock(count > 0);
             return vo;
         }).collect(Collectors.toList());
     }
 
+    @io.seata.spring.annotation.GlobalTransactional // 开启分布式事务
+    @Transactional // 开启本地事务
     @Override
-    @Transactional
     public Boolean orderLockStock(WareSkuLockTo vo) {
         // 【新增】1. 保存库存工作单主表 (wms_ware_order_task)
         WareOrderTaskEntity taskEntity = new WareOrderTaskEntity();
@@ -174,17 +185,13 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
     @Transactional
     @Override
     public void orderDeductStock(String orderSn) {
-        System.out.println("====== [开始执行物理扣减] 订单号: " + orderSn + " ======");
-
-        // 1. 查找该订单对应的库存工作单
         WareOrderTaskEntity taskEntity = wareOrderTaskService.getOrderTaskByOrderSn(orderSn);
         if (taskEntity == null) {
-            System.out.println("错误：未找到订单 [" + orderSn + "] 对应的库存工作单！");
+            log.warn("未找到订单对应库存工作单，orderSn={}", orderSn);
             return;
         }
         Long taskId = taskEntity.getId();
 
-        // 2. 查找该工作单下所有【已锁定】的详情
         List<WareOrderTaskDetailEntity> details = wareOrderTaskDetailService.list(
                 new QueryWrapper<WareOrderTaskDetailEntity>()
                         .eq("task_id", taskId)
@@ -192,7 +199,7 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
         );
 
         if (details == null || details.isEmpty()) {
-            System.out.println("提示：订单 [" + orderSn + "] 没有需要扣减的锁定详情。");
+            log.info("订单无可扣减锁定库存，orderSn={}", orderSn);
             return;
         }
 
@@ -201,28 +208,22 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
             Long wareId = detail.getWareId();
             Integer skuNum = detail.getSkuNum();
 
-            // 检查数据完整性
             if (skuId == null || wareId == null || skuNum == null) {
-                System.out.println("错误：详情单据数据不全！ID: " + detail.getId() + "，跳过此项。");
+                log.warn("库存扣减详情数据不完整，detailId={}", detail.getId());
                 continue;
             }
 
-            System.out.println("准备扣减库存 -> 商品ID: " + skuId + ", 仓库ID: " + wareId + ", 数量: " + skuNum);
-
-            // 3. 执行物理扣减 SQL
             Long count = baseMapper.realDeductStock(skuId, wareId, skuNum);
 
             if (count > 0) {
-                // 4. 更新详情状态为：已扣减 (2)
                 detail.setLockStatus(2);
                 wareOrderTaskDetailService.updateById(detail);
-                System.out.println("成功：商品 [" + skuId + "] 物理扣减完成。");
+                log.info("库存物理扣减完成，orderSn={}, skuId={}, wareId={}, skuNum={}", orderSn, skuId, wareId, skuNum);
             } else {
-                System.out.println("严重错误：物理库存扣减失败！SQL返回0，单号: " + orderSn);
-                throw new RuntimeException("库存扣减异常，回滚事务");
+                throw new IllegalStateException("库存扣减异常，orderSn=" + orderSn + ", skuId=" + skuId);
             }
         }
-        System.out.println("====== [物理扣减结束] 订单号: " + orderSn + " ======");
+        log.info("库存物理扣减完成，orderSn={}", orderSn);
     }
 
     private void unLockSql(Long skuId, Long wareId, Integer num, Long detailId) {

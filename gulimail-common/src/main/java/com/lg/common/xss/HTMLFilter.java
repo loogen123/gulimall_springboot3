@@ -171,9 +171,9 @@ public final class HTMLFilter {
         vProtocolAtts = (String[]) conf.get("vProtocolAtts");
         vRemoveBlanks = (String[]) conf.get("vRemoveBlanks");
         vAllowedEntities = (String[]) conf.get("vAllowedEntities");
-        stripComment =  conf.containsKey("stripComment") ? (Boolean) conf.get("stripComment") : true;
-        encodeQuotes = conf.containsKey("encodeQuotes") ? (Boolean) conf.get("encodeQuotes") : true;
-        alwaysMakeTags = conf.containsKey("alwaysMakeTags") ? (Boolean) conf.get("alwaysMakeTags") : true;
+        stripComment = !conf.containsKey("stripComment") || (Boolean) conf.get("stripComment");
+        encodeQuotes = !conf.containsKey("encodeQuotes") || (Boolean) conf.get("encodeQuotes");
+        alwaysMakeTags = !conf.containsKey("alwaysMakeTags") || (Boolean) conf.get("alwaysMakeTags");
     }
 
     private void reset() {
@@ -297,9 +297,9 @@ public final class HTMLFilter {
 
         // these get tallied in processTag
         // (remember to reset before subsequent calls to filter method)
-        for (String key : vTagCounts.keySet()) {
-            for (int ii = 0; ii < vTagCounts.get(key); ii++) {
-                s += "</" + key + ">";
+        for (Map.Entry<String, Integer> entry : vTagCounts.entrySet()) {
+            for (int ii = 0; ii < entry.getValue(); ii++) {
+                s += "</" + entry.getKey() + ">";
             }
         }
 
@@ -332,13 +332,9 @@ public final class HTMLFilter {
         Matcher m = P_END_TAG.matcher(s);
         if (m.find()) {
             final String name = m.group(1).toLowerCase();
-            if (allowed(name)) {
-                if (!inArray(name, vSelfClosingTags)) {
-                    if (vTagCounts.containsKey(name)) {
-                        vTagCounts.put(name, vTagCounts.get(name) - 1);
-                        return "</" + name + ">";
-                    }
-                }
+            if (allowed(name) && !inArray(name, vSelfClosingTags) && vTagCounts.containsKey(name)) {
+                vTagCounts.put(name, vTagCounts.get(name) - 1);
+                return "</" + name + ">";
             }
         }
 

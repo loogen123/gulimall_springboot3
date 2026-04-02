@@ -1,4 +1,9 @@
 spring:
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1.0.0
+    baseline-description: "Initial version"
   datasource:
     username: root
     password: root
@@ -14,12 +19,15 @@ spring:
     host: 192.168.10.101
     port: 5672
     virtual-host: /
-    # 开启发送端确认机制（保证消息不丢失）
     publisher-confirm-type: correlated
     publisher-returns: true
     listener:
       simple:
               acknowledge-mode: manual
+  data:
+    redis:
+      host: 192.168.10.101
+      port: 6379
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   global-config:
@@ -30,13 +38,32 @@ server:
   port: 11000
 logging:
   level:
-    com.lg.gulimail.ware: debug
+    com.lg.gulimail: debug
+  pattern:
+    level: "%5p [${spring.application.name:-},%X{traceId:-},%X{spanId:-}]"
+
 management:
   zipkin:
     tracing:
-      # 错误写法：http://localhost:9411/api/v2/spans
-      # 正确写法：改成你 Linux 服务器的真实 IP
       endpoint: http://192.168.10.101:9411/api/v2/spans
   tracing:
     sampling:
-      probability: 1.0  # 确保 100% 采样，方便调试
+      probability: 1.0
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+seata:
+  tx-service-group: gulimail-ware-tx-group
+  service:
+    vgroup-mapping:
+      gulimail-ware-tx-group: default
+  registry:
+    type: nacos
+    nacos:
+      server-addr: 127.0.0.1:8848
+      namespace: ""
+      group: SEATA_GROUP
+      application: seata-server
+

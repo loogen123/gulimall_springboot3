@@ -17,4 +17,8 @@ public interface OrderDao extends BaseMapper<OrderEntity> {
 
     // 加上 @Param 注解
     int updateOrderStatus(@Param("outTradeNo") String outTradeNo, @Param("code") Integer code);
+
+    int updateOrderStatusByIdAndFromStatus(@Param("id") Long id,
+                                           @Param("targetStatus") Integer targetStatus,
+                                           @Param("fromStatus") Integer fromStatus);
 }

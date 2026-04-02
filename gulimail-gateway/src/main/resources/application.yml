@@ -1,4 +1,10 @@
 spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  data:
+    redis:
+      host: 192.168.10.101
+      port: 6379
   cloud:
     gateway:
       routes:
@@ -110,15 +116,74 @@ spring:
     sentinel:
       transport:
         dashboard: localhost:8333
+      datasource:
+        ds1:
+          nacos:
+            server-addr: 127.0.0.1:8848
+            dataId: gulimail-gateway-sentinel-flow
+            groupId: DEFAULT_GROUP
+            data-type: json
+            rule-type: gw-flow
+gulimail:
+  gateway:
+    cors:
+      allowed-origin-patterns:
+        - "http://localhost:*"
+        - "https://localhost:*"
+        - "http://*.gulimail.com"
+        - "https://*.gulimail.com"
+      allowed-methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allowed-headers:
+        - "*"
+      exposed-headers:
+        - Content-Type
+        - X-Request-Id
+        - X-Trace-Id
+      allow-credentials: true
+      max-age-seconds: 1800
+    sentinel:
+      block:
+        code: 429
+        msg: "系统繁忙，网关限流中"
+    security:
+      auth:
+        enabled: false
+        header-name: X-Auth-Token
+        token: dev-gateway-token
+        protected-paths:
+          - /api/**
+        ignore-paths:
+          - /api/captcha.jpg
+          - /api/sys/login
+      replay:
+        enabled: false
+        request-id-header: X-Request-Id
+        window-seconds: 60
+        protected-paths:
+          - /api/**
 logging:
   pattern:
     # 让日志显示 TraceId 和 SpanId
     level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
 
 management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
   tracing:
     sampling:
-      probability: 1.0 # 100% 采样，生产环境通常设为 0.1
+      probability: 0.1
   zipkin:
     tracing:
       endpoint: "http://192.168.10.101:9411/api/v2/spans"

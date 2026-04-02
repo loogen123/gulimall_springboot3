@@ -111,9 +111,6 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryDao, CategoryEntity
     @Cacheable(value = "category", key = "#root.methodName", sync = true)
     @Override
     public Map<String, List<Catalog2Vo>> getCatalogJson() {
-        System.out.println("【SpringCache】缓存未命中，执行数据库查询逻辑...");
-
-        // 直接调用原来的数据库查询逻辑，SpringCache 会自动把返回值存入 Redis
         return getCatalogJsonFromDb();
     }
 

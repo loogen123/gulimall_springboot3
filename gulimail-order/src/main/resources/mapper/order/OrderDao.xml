@@ -52,7 +52,15 @@
         update oms_order
         set status = #{code}
         where order_sn = #{outTradeNo}
-          and status = 0  </update>
+          and status = 0
+    </update>
+
+    <update id="updateOrderStatusByIdAndFromStatus">
+        update oms_order
+        set status = #{targetStatus}
+        where id = #{id}
+          and status = #{fromStatus}
+    </update>
 
 
 </mapper>

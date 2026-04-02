@@ -28,6 +28,7 @@ import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder;
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightField;
 import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -41,6 +42,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class MallSearchServiceImpl implements MallSearchService {
+    @Value("${gulimail.search.page-size:16}")
+    private int pageSize;
 
     @Autowired
     private RestHighLevelClient client;
@@ -139,9 +142,9 @@ public class MallSearchServiceImpl implements MallSearchService {
             String[] s = param.getSort().split("_");
             sourceBuilder.sort(s[0], s[1].equalsIgnoreCase("asc") ? SortOrder.ASC : SortOrder.DESC);
         }
-        // 3.2 分页 (pageSize 默认为 16)
-        sourceBuilder.from((param.getPageNum() - 1) * 16);
-        sourceBuilder.size(16);
+        int currentPage = param.getPageNum() == null || param.getPageNum() < 1 ? 1 : param.getPageNum();
+        sourceBuilder.from((currentPage - 1) * pageSize);
+        sourceBuilder.size(pageSize);
         // 3.3 高亮
         if (!StringUtils.isEmpty(param.getKeyword())) {
             HighlightBuilder builder = new HighlightBuilder();
@@ -169,7 +172,7 @@ public class MallSearchServiceImpl implements MallSearchService {
         attr_agg.subAggregation(attr_id_agg);
         sourceBuilder.aggregation(attr_agg);
 
-        System.out.println("构建的DSL语句："+sourceBuilder.toString());
+        log.debug("构建的DSL语句：{}", sourceBuilder);
         return new SearchRequest(new String[]{"product"}, sourceBuilder);
     }
 
@@ -249,9 +252,9 @@ public class MallSearchServiceImpl implements MallSearchService {
         long total = hits.getTotalHits().value;
         result.setTotal(total);
         // 计算总页数
-        int totalPages = (int) (total + 16 - 1) / 16;
+        int totalPages = (int) (total + pageSize - 1) / pageSize;
         result.setTotalPages(totalPages);
-        result.setPageNum(param.getPageNum());
+        result.setPageNum(param.getPageNum() == null || param.getPageNum() < 1 ? 1 : param.getPageNum());
 
         // 6. 构建面包屑导航
         buildNavs(result, param);
@@ -260,8 +263,9 @@ public class MallSearchServiceImpl implements MallSearchService {
         List<Integer> pageNavs = new ArrayList<>();
         if (totalPages > 0) {
             // 策略：显示当前页的前2页和后2页（例如当前为5，则显示 3 4 5 6 7）
-            int start = Math.max(1, param.getPageNum() - 2);
-            int end = Math.min(totalPages, param.getPageNum() + 2);
+            int pageNum = param.getPageNum() == null || param.getPageNum() < 1 ? 1 : param.getPageNum();
+            int start = Math.max(1, pageNum - 2);
+            int end = Math.min(totalPages, pageNum + 2);
             for (int i = start; i <= end; i++) {
                 pageNavs.add(i);
             }

@@ -1,6 +1,7 @@
 package com.lg.gulimail.seckill.interceptor;
 
 import com.lg.common.constant.AuthServerConstant;
+import com.lg.common.exception.BizCodeEnum;
 import com.lg.common.vo.MemberResponseVo;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -8,6 +9,9 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.servlet.HandlerInterceptor;
+
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @Component
 public class LoginUserInterceptor implements HandlerInterceptor {
@@ -38,8 +42,14 @@ public class LoginUserInterceptor implements HandlerInterceptor {
         // 只有明确要抢购的路径才强制要求登录并创建 Session
         if (antPathMatcher.match("/kill", uri)) {
             // 这里可以执行 getSession()，因为必须登录，此时创建 Session 是合理的
-            request.getSession().setAttribute("msg", "请先登录再抢购");
-            response.sendRedirect("http://auth.gulimail.com/login.html?originUrl=http://seckill.gulimail.com/kill" + request.getQueryString());
+            request.getSession().setAttribute("msg", BizCodeEnum.UNAUTHORIZED_EXCEPTION.getMsg());
+            String queryString = request.getQueryString();
+            String originUrl = "http://seckill.gulimail.com/kill";
+            if (queryString != null && !queryString.isBlank()) {
+                originUrl = originUrl + "?" + queryString;
+            }
+            String encodedOriginUrl = URLEncoder.encode(originUrl, StandardCharsets.UTF_8);
+            response.sendRedirect("http://auth.gulimail.com/login.html?originUrl=" + encodedOriginUrl);
             return false;
         }
 

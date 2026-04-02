@@ -8,4 +8,5 @@ spring:
         namespace: 3531d4a7-97cf-4b4e-bfc1-fe4eec5f2f4e
         file-extension: yaml
         # 强制在启动阶段拉取配置
-        import-check: true
+        import-check:
+          enabled: true

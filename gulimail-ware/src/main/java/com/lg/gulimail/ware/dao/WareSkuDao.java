@@ -5,6 +5,7 @@ import com.lg.gulimail.ware.entity.WareSkuEntity;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.Map;
 import java.util.List;
 
 /**
@@ -20,6 +21,8 @@ public interface WareSkuDao extends BaseMapper<WareSkuEntity> {
     void addStock(Long skuId, Long wareId, Integer skuNum);
 
     long getSkuStock(Long skuId);
+
+    List<Map<String, Object>> getSkusStock(@Param("skuIds") List<Long> skuIds);
 
     Long lockSkuStock(@Param("skuId") Long skuId, @Param("wareId") Long wareId, @Param("count") Integer count);
 

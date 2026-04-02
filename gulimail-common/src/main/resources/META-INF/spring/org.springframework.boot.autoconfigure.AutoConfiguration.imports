@@ -1,1 +1,5 @@
 com.lg.common.exception.GulimailExceptionControllerAdvice
+com.lg.common.config.XxlJobConfig
+com.lg.common.config.CommonRedissonConfig
+com.lg.common.config.CommonFlywayConfig
+com.lg.common.config.CommonMybatisAutoConfiguration

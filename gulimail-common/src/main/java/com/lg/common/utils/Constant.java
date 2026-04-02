@@ -141,7 +141,7 @@ public class Constant {
         }
 
         public static CloudService getByValue(Integer value) {
-            Optional<CloudService> first = Stream.of(CloudService.values()).filter(cs -> value.equals(cs.value)).findFirst();
+            Optional<CloudService> first = Stream.of(values()).filter(cs -> value.equals(cs.value)).findFirst();
             if (!first.isPresent()) {
                 throw new IllegalArgumentException("非法的枚举值:" + value);
             }

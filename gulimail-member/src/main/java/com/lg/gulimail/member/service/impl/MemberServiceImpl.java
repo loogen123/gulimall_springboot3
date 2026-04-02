@@ -17,22 +17,26 @@ import com.lg.gulimail.member.exception.UsernameExistException;
 import com.lg.gulimail.member.service.MemberService;
 import com.lg.gulimail.member.vo.MemberLoginVo;
 import com.lg.gulimail.member.vo.MemberRegisterVo;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Date;
 import java.util.Map;
 
-
+@Slf4j
 @Service("memberService")
 public class MemberServiceImpl extends ServiceImpl<MemberDao, MemberEntity> implements MemberService {
     @Autowired
     private RestTemplate restTemplate;
     @Autowired
     private MemberLevelDao memberLevelDao;
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
     @Override
     public PageUtils queryPage(Map<String, Object> params) {
         IPage<MemberEntity> page = this.page(
@@ -43,6 +47,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberDao, MemberEntity> impl
         return new PageUtils(page);
     }
 
+    @Transactional
     @Override
     public void register(MemberRegisterVo vo) {
         MemberEntity entity = new MemberEntity();
@@ -72,7 +77,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberDao, MemberEntity> impl
         entity.setMobile(vo.getPhone());
         entity.setUsername(vo.getUserName());
 
-        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         entity.setPassword(passwordEncoder.encode(vo.getPassword()));
 
         this.baseMapper.insert(entity);
@@ -111,7 +115,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberDao, MemberEntity> impl
             // 2. 获取数据库里的密文
             String passwordDb = entity.getPassword();
             // 3. 使用 BCrypt 进行密文匹配 (关键！)
-            BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
             boolean matches = passwordEncoder.matches(password, passwordDb);
 
             if (matches) {
@@ -124,12 +127,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberDao, MemberEntity> impl
         }
     }
     @Override
+    @Transactional
     public MemberEntity login(SocialUser socialUser) throws Exception {
-        // 1. 打印 Token 详情，检查是否包含 "access_token=" 等多余前缀
-        System.out.println("======= GitHub 登录调试信息 =======");
-        System.out.println("收到 AccessToken: " + socialUser.getAccessToken());
-        System.out.println("==================================");
-
         String url = "https://api.github.com/user";
         HttpHeaders headers = new HttpHeaders();
 
@@ -142,7 +141,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberDao, MemberEntity> impl
 
             if (response.getStatusCode() == HttpStatus.OK) {
                 String json = response.getBody();
-                System.out.println("GitHub 用户信息获取成功: " + json);
                 JSONObject jsonObject = JSON.parseObject(json);
 
                 String uid = jsonObject.getString("id");
@@ -175,8 +173,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberDao, MemberEntity> impl
                 }
             }
         } catch (Exception e) {
-            System.err.println("远程获取 GitHub 用户信息失败！错误详情：");
-            e.printStackTrace();
+            log.error("远程获取 GitHub 用户信息失败", e);
         }
         return null;
     }

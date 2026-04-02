@@ -16,6 +16,7 @@ import com.lg.gulimail.coupon.service.SkuLadderService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -42,13 +43,18 @@ public class SkuFullReductionServiceImpl extends ServiceImpl<SkuFullReductionDao
     @Autowired
     private MemberPriceService memberPriceService;
 
+    @Transactional
     @Override
     public void saveSkuReduction(SkuReductionTo reductionTo) {
+        if (reductionTo == null) {
+            return;
+        }
         // 1. 保存满减信息 (sms_sku_full_reduction)
         SkuFullReductionEntity fullReductionEntity = new SkuFullReductionEntity();
         BeanUtils.copyProperties(reductionTo, fullReductionEntity);
         // 只有满减价格大于0才保存
-        if (fullReductionEntity.getFullPrice().compareTo(BigDecimal.ZERO) > 0) {
+        if (fullReductionEntity.getFullPrice() != null
+                && fullReductionEntity.getFullPrice().compareTo(BigDecimal.ZERO) > 0) {
             this.save(fullReductionEntity);
         }
 

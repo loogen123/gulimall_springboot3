@@ -13,6 +13,8 @@ import com.lg.gulimail.seckill.interceptor.LoginUserInterceptor;
 import com.lg.gulimail.seckill.service.SeckillService;
 import com.lg.gulimail.seckill.to.SeckillSkuRedisTo;
 import com.lg.gulimail.seckill.vo.SeckillSessionWithSkusVo;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RSemaphore;
 import org.redisson.api.RedissonClient;
@@ -24,6 +26,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import jakarta.annotation.PostConstruct;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -39,8 +42,10 @@ import java.util.stream.Collectors;
 public class SeckillServiceImpl implements SeckillService {
 
     private final String SESSION_CACHE_PREFIX = "seckill:sessions:";
+    private final String SESSION_CACHE_INDEX = "seckill:sessions:index";
     private final String SKUS_CACHE_PREFIX = "seckill:skus";
     private final String SKU_STOCK_SEMAPHORE = "seckill:stock:";
+    private final String STOCK_CACHE_INDEX = "seckill:stock:index";
 
     @Autowired
     private CouponFeignService couponFeignService;
@@ -56,6 +61,23 @@ public class SeckillServiceImpl implements SeckillService {
 
     @Autowired
     private ProductFeignService productFeignService;
+
+    @Autowired
+    private MeterRegistry meterRegistry;
+
+    private Counter seckillSuccessCounter;
+    private Counter seckillFailCounter;
+
+    @PostConstruct
+    public void initMetrics() {
+        seckillSuccessCounter = Counter.builder("gulimail.seckill.success")
+                .description("秒杀成功次数")
+                .register(meterRegistry);
+        seckillFailCounter = Counter.builder("gulimail.seckill.fail")
+                .description("秒杀失败次数")
+                .register(meterRegistry);
+    }
+
     @Override
     public void uploadSeckillSkuLatest3Days() {
         // 1. 远程调用优惠券服务，查询未来3天内的秒杀场次及关联商品
@@ -77,8 +99,7 @@ public class SeckillServiceImpl implements SeckillService {
     @Override
     public List<SeckillSkuRedisTo> getCurrentSeckillSkus() {
         long now = System.currentTimeMillis();
-        // 1. 获取所有场次 Key
-        Set<String> keys = redisTemplate.keys(SESSION_CACHE_PREFIX + "*");
+        Set<String> keys = redisTemplate.opsForSet().members(SESSION_CACHE_INDEX);
 
         if (keys != null && !keys.isEmpty()) {
             for (String key : keys) {
@@ -148,15 +169,27 @@ public class SeckillServiceImpl implements SeckillService {
         // 2. 获取商品缓存
         BoundHashOperations<String, String, String> hashOps = redisTemplate.boundHashOps(SKUS_CACHE_PREFIX);
         String json = hashOps.get(killId);
-        if (StringUtils.isEmpty(json)) return null;
+        if (StringUtils.isEmpty(json)) {
+            seckillFailCounter.increment();
+            return null;
+        }
 
         SeckillSkuRedisTo redisTo = JSON.parseObject(json, SeckillSkuRedisTo.class);
 
         // 3. 校验合法性
         long now = System.currentTimeMillis();
-        if (now < redisTo.getStartTime() || now > redisTo.getEndTime()) return null;
-        if (!redisTo.getRandomCode().equals(key)) return null;
-        if (num > redisTo.getSeckillLimit()) return null;
+        if (now < redisTo.getStartTime() || now > redisTo.getEndTime()) {
+            seckillFailCounter.increment();
+            return null;
+        }
+        if (!redisTo.getRandomCode().equals(key)) {
+            seckillFailCounter.increment();
+            return null;
+        }
+        if (num > redisTo.getSeckillLimit()) {
+            seckillFailCounter.increment();
+            return null;
+        }
 
         // 4. 幂等性校验（使用真实的 memberId）
         // 防止同一个用户对同一个场次的同一个商品重复抢购
@@ -187,15 +220,21 @@ public class SeckillServiceImpl implements SeckillService {
                     rabbitTemplate.convertAndSend("order-event-exchange", "order.seckill.order", orderTo);
 
                     log.info("秒杀成功！订单号：{}，MQ 消息发送成功", orderSn);
+                    seckillSuccessCounter.increment();
                     return orderSn;
                 } catch (Exception e) {
                     log.error("MQ 发送异常：", e);
                     // 极端情况回滚：删除幂等性占位并释放信号量
                     redisTemplate.delete(seckillKey);
                     semaphore.release(num);
+                    seckillFailCounter.increment();
                     return null;
                 }
+            } else {
+                seckillFailCounter.increment();
             }
+        } else {
+            seckillFailCounter.increment();
         }
         return null;
     }
@@ -222,6 +261,7 @@ public class SeckillServiceImpl implements SeckillService {
                 if (collect != null && !collect.isEmpty()) {
                     // 存入 Redis List
                     redisTemplate.opsForList().leftPushAll(key, collect);
+                    redisTemplate.opsForSet().add(SESSION_CACHE_INDEX, key);
 
                     // 2. 设置过期时间：活动结束时间 - 当前时间 + 1天冗余
                     long ttl = endTime - System.currentTimeMillis() + 86400000L;
@@ -288,6 +328,7 @@ public class SeckillServiceImpl implements SeckillService {
                     RSemaphore semaphore = redissonClient.getSemaphore(SKU_STOCK_SEMAPHORE + token);
                     // 设置秒杀库存作为信号量许可
                     semaphore.trySetPermits(seckillSkuVo.getSeckillCount());
+                    redisTemplate.opsForSet().add(STOCK_CACHE_INDEX, SKU_STOCK_SEMAPHORE + token);
 
                     // (7) 信号量设置过期时间（建议设为场次结束时间 + 1天）
                     long ttl = session.getEndTime().getTime() - System.currentTimeMillis() + 86400000L;

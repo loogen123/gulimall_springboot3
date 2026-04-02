@@ -18,6 +18,18 @@ public class OrderSubmitVo {
     /** 应付总额（用于后端验价：对比用户看到的价格和后台实时算的价格） */
     private BigDecimal payPrice;
 
+    /** 使用的优惠券 ID */
+    private Long couponId;
+
+    /** 使用积分数量 */
+    private Integer useIntegration = 0;
+
+    /** 优惠券抵扣金额（下单前试算值） */
+    private BigDecimal couponAmount;
+
+    /** 积分抵扣金额（下单前试算值） */
+    private BigDecimal integrationAmount;
+
     /** 订单备注 */
     private String remarks;
 

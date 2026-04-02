@@ -55,6 +55,9 @@ public class SeckillSessionController {
     @RequestMapping("/save")
     //@RequiresPermissions("coupon:seckillsession:save")
     public R save(@RequestBody SeckillSessionEntity seckillSession){
+        if (seckillSession == null) {
+            return R.error(10001, "请求参数不能为空");
+        }
         seckillSessionService.save(seckillSession);
 
         return R.ok();
@@ -66,6 +69,9 @@ public class SeckillSessionController {
     @RequestMapping("/update")
     //@RequiresPermissions("coupon:seckillsession:update")
     public R update(@RequestBody SeckillSessionEntity seckillSession){
+        if (seckillSession == null || seckillSession.getId() == null) {
+            return R.error(10001, "请求参数不能为空");
+        }
         seckillSessionService.updateById(seckillSession);
 
         return R.ok();
@@ -77,6 +83,9 @@ public class SeckillSessionController {
     @RequestMapping("/delete")
     //@RequiresPermissions("coupon:seckillsession:delete")
     public R delete(@RequestBody Long[] ids){
+        if (ids == null || ids.length == 0) {
+            return R.error(10001, "ids不能为空");
+        }
         seckillSessionService.removeByIds(Arrays.asList(ids));
 
         return R.ok();

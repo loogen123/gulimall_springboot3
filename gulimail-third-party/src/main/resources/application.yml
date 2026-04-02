@@ -1,4 +1,8 @@
 spring:
+  data:
+    redis:
+      host: 192.168.10.101
+      port: 6379
   application:
     name: gulimail-third-party
   cloud:
@@ -10,3 +14,20 @@ spring:
         server-addr: 127.0.0.1:8848
 server:
   port: 30000
+logging:
+  level:
+    com.lg.gulimail: debug
+  pattern:
+    level: "%5p [${spring.application.name:-},%X{traceId:-},%X{spanId:-}]"
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://192.168.10.101:9411/api/v2/spans
+  endpoints:
+    web:
+      exposure:
+        include: "*"

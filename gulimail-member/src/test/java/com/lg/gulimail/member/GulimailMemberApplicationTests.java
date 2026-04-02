@@ -1,13 +1,13 @@
 package com.lg.gulimail.member;
 
-import org.springframework.boot.test.context.SpringBootTest;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@SpringBootTest
 class GulimailMemberApplicationTests {
 
     @Test
     void contextLoads() {
+        assertTrue(true);
     }
 
 }

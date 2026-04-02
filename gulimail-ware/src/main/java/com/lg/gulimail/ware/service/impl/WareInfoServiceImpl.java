@@ -13,6 +13,7 @@ import com.lg.gulimail.ware.dao.WareInfoDao;
 import com.lg.gulimail.ware.entity.WareInfoEntity;
 import com.lg.gulimail.ware.feign.MemberFeignService;
 import com.lg.gulimail.ware.service.WareInfoService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -20,7 +21,7 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.util.Map;
 
-
+@Slf4j
 @Service("wareInfoService")
 public class WareInfoServiceImpl extends ServiceImpl<WareInfoDao, WareInfoEntity> implements WareInfoService {
     @Autowired
@@ -55,20 +56,22 @@ public class WareInfoServiceImpl extends ServiceImpl<WareInfoDao, WareInfoEntity
     @Override
     public FareVo getFare(Long addrId) {
         R r = memberFeignService.info(addrId);
-
-        // 关键点：一定要用 "memberReceiveAddress" 这个 Key，因为它对应你 JSON 里的那个键
         MemberAddressVo data = r.getData("memberReceiveAddress", new TypeReference<MemberAddressVo>() {});
 
         if (data != null) {
             FareVo fareVo = new FareVo();
-            // 计算运费（手机尾号逻辑）
             String phone = data.getPhone();
+            if (phone == null || phone.isBlank()) {
+                fareVo.setFare(BigDecimal.ZERO);
+                fareVo.setAddress(data);
+                return fareVo;
+            }
             String fareStr = phone.substring(phone.length() - 1);
             fareVo.setFare(new BigDecimal(fareStr));
             fareVo.setAddress(data);
             return fareVo;
         }
-        System.out.println("警告：地址对象解析为 null");
+        log.warn("运费计算失败，地址对象为空，addrId={}", addrId);
         return null;
     }
 

@@ -8,6 +8,8 @@
 
 package com.lg.common.utils;
 
+import com.lg.common.exception.BizCodeEnum;
+
 /**
  * 自定义异常
  *
@@ -39,6 +41,18 @@ public class RRException extends RuntimeException {
 		super(msg, e);
 		this.msg = msg;
 		this.code = code;
+	}
+
+	public RRException(BizCodeEnum bizCodeEnum) {
+		super(bizCodeEnum.getMsg());
+		this.msg = bizCodeEnum.getMsg();
+		this.code = bizCodeEnum.getCode();
+	}
+
+	public RRException(BizCodeEnum bizCodeEnum, Throwable e) {
+		super(bizCodeEnum.getMsg(), e);
+		this.msg = bizCodeEnum.getMsg();
+		this.code = bizCodeEnum.getCode();
 	}
 
 	public String getMsg() {

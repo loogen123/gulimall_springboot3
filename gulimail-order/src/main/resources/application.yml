@@ -1,4 +1,9 @@
 spring:
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1.0.0
+    baseline-description: "Initial version"
   session:
     store-type: redis
   datasource:
@@ -33,6 +38,10 @@ spring:
     redis:
       host: 192.168.10.101
       port: 6379
+gulimail:
+  order:
+    session:
+      secure: false
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   global-config:
@@ -40,12 +49,54 @@ mybatis-plus:
       id-type: auto
 server:
   port: 9000
+logging:
+  level:
+    com.lg.gulimail: debug
+  pattern:
+    level: "%5p [${spring.application.name:-},%X{traceId:-},%X{spanId:-}]"
+
 management:
   zipkin:
     tracing:
-      # 错误写法：http://localhost:9411/api/v2/spans
-      # 正确写法：改成你 Linux 服务器的真实 IP
       endpoint: http://192.168.10.101:9411/api/v2/spans
   tracing:
     sampling:
-      probability: 1.0  # 确保 100% 采样，方便调试
+      probability: 1.0
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+xxl:
+  job:
+    admin:
+      addresses: http://192.168.10.101:8080/xxl-job-admin
+    accessToken: default_token
+    executor:
+      appname: gulimail-order-executor
+      port: 9997
+      logpath: ./logs/xxl-job/gulimail-order
+      logretentiondays: 30
+
+seata:
+  tx-service-group: gulimail-order-tx-group
+  service:
+    vgroup-mapping:
+      gulimail-order-tx-group: default
+  registry:
+    type: nacos
+    nacos:
+      server-addr: 127.0.0.1:8848
+      namespace: ""
+      group: SEATA_GROUP
+      application: seata-server
+

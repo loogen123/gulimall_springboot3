@@ -27,35 +27,23 @@ public class FeignConfig {
      */
     @Bean
     public RequestInterceptor requestInterceptor() {
-        return new RequestInterceptor() {
-            @Override
-            public void apply(RequestTemplate template) {
-                // 1. 先尝试从全局 ThreadLocal 中获取（适配 AI 异步线程）
-                String aiCookie = USER_COOKIE_THREAD_LOCAL.get();
-                if (aiCookie != null && !aiCookie.isEmpty()) {
-                    System.out.println("【Feign请求拦截器】从 AI 异步线程获取到 Cookie: " + aiCookie);
-                    template.header("Cookie", aiCookie);
-                    return;
-                }
-
-                // 2. 如果没获取到，说明是普通的同步请求，直接从 RequestContextHolder 获取
-                ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-                if (attributes != null) {
-                    HttpServletRequest request = attributes.getRequest();
-                    if (request != null) {
-                        // 优先尝试从请求头获取 Cookie
-                        String cookie = request.getHeader("Cookie");
-                        if (cookie != null) {
-                            System.out.println("【Feign请求拦截器】从主线程获取到 Cookie: " + cookie);
-                            template.header("Cookie", cookie);
-                        } else {
-                            System.out.println("【Feign请求拦截器】主线程请求中没有 Cookie。");
-                        }
-                    }
-                } else {
-                    System.out.println("【Feign请求拦截器】未获取到请求上下文，且 ThreadLocal 为空。");
-                    // 以前为了 AI 做的终极兜底逻辑，现在 AI 已经迁移到独立模块，这里直接删掉兜底逻辑
-                }
+        return template -> {
+            String aiCookie = USER_COOKIE_THREAD_LOCAL.get();
+            if (aiCookie != null && !aiCookie.isEmpty()) {
+                template.header("Cookie", aiCookie);
+                return;
+            }
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attributes == null) {
+                return;
+            }
+            HttpServletRequest request = attributes.getRequest();
+            if (request == null) {
+                return;
+            }
+            String cookie = request.getHeader("Cookie");
+            if (cookie != null && !cookie.isEmpty()) {
+                template.header("Cookie", cookie);
             }
         };
     }

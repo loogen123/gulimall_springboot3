@@ -652,12 +652,18 @@
                 alert("请输入您的问题！");
                 return;
             }
+            var safeMsg = msg
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
 
             var chatBox = $("#ai_chat_box");
 
             // 1. 把用户的问题显示在右侧
             var userHtml = '<div style="display: flex; align-items: flex-start; gap: 10px; justify-content: flex-end;">' +
-                '<div style="background: #e1f3d8; padding: 12px 18px; border-radius: 10px 0 10px 10px; border: 1px solid #c2e7b0; max-width: 80%; line-height: 1.6; font-size: 14px; color: #333; word-break: break-all;">' + msg + '</div>' +
+                '<div style="background: #e1f3d8; padding: 12px 18px; border-radius: 10px 0 10px 10px; border: 1px solid #c2e7b0; max-width: 80%; line-height: 1.6; font-size: 14px; color: #333; word-break: break-all;">' + safeMsg + '</div>' +
                 '<div style="width: 38px; height: 38px; background: #666; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; flex-shrink: 0;">Me</div>' +
                 '</div>';
             chatBox.append(userHtml);
@@ -682,7 +688,7 @@
             // 通过网关路由到独立的 AI 微服务 (这里必须使用与主站相同的域名，才能带上Cookie)
             // 后端接口已升级为 v1 版本: /api/ai/v1/chat/stream
             var baseUrl = window.location.origin; // 自动获取当前域名（比如 http://gulimail.com）
-            var url = baseUrl + "/api/ai/v1/chat/stream?msg=" + encodeURIComponent(msg) + "&clientCookie=" + encodeURIComponent(document.cookie);
+            var url = baseUrl + "/api/ai/v1/chat/stream?msg=" + encodeURIComponent(msg);
             console.log("正在连接 SSE:", url);
             var eventSource = new EventSource(url, { withCredentials: true });
             

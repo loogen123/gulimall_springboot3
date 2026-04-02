@@ -17,6 +17,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -45,15 +46,15 @@ public class CartServiceImpl implements CartService {
 
         String res = (String) cartOps.get(skuId.toString());
 
-        if (StringUtils.isEmpty(res)) {
-            // 1. 之前没有，新增商品
+        if (!StringUtils.hasText(res)) {
             CartItem cartItem = new CartItem();
-
-            // 任务1：异步获取商品基本信息（返回 R）
             CompletableFuture<Void> getSkuInfoTask = CompletableFuture.runAsync(() -> {
                 R r = productFeignService.getSkuInfo(skuId);
                 if (r != null && r.getCode() == 0) {
                     SkuInfoVo data = r.getData("skuInfo", new TypeReference<SkuInfoVo>(){});
+                    if (data == null) {
+                        throw new IllegalStateException("商品信息为空，skuId=" + skuId);
+                    }
                     cartItem.setCheck(true);
                     cartItem.setCount(num);
                     cartItem.setImage(data.getSkuDefaultImg());
@@ -65,9 +66,7 @@ public class CartServiceImpl implements CartService {
                 }
             }, executor);
 
-            // 任务2：异步获取销售属性信息（返回 List<String>）
             CompletableFuture<Void> getSkuAttrTask = CompletableFuture.runAsync(() -> {
-                // 【修正点】：直接接收 List<String>，不要再用 R 去接收
                 List<String> attrValues = productFeignService.getSkuSaleAttrValues(skuId);
                 if (attrValues != null) {
                     cartItem.setSkuAttr(attrValues);
@@ -75,15 +74,13 @@ public class CartServiceImpl implements CartService {
                     log.error("远程调用 getSkuSaleAttrValues 失败，skuId: {}，返回为 null", skuId);
                 }
             }, executor);
-
-            // 等待所有异步任务完成
             CompletableFuture.allOf(getSkuInfoTask, getSkuAttrTask).get();
-
-            // 存入 Redis
+            if (cartItem.getSkuId() == null) {
+                throw new IllegalStateException("添加购物车失败，商品不存在，skuId=" + skuId);
+            }
             cartOps.put(skuId.toString(), JSON.toJSONString(cartItem));
             return cartItem;
         } else {
-            // 2. 已有商品，只修改数量
             CartItem cartItem = JSON.parseObject(res, CartItem.class);
             cartItem.setCount(cartItem.getCount() + num);
             cartOps.put(skuId.toString(), JSON.toJSONString(cartItem));
@@ -91,10 +88,11 @@ public class CartServiceImpl implements CartService {
         }
     }
 
-    // ... 其余 getCartItem, getCart, deleteItem, checkItem 等方法保持原样即可 ...
-
     @Override
     public CartItem getCartItem(Long skuId, Long userId) {
+        if (userId == null) {
+            return null;
+        }
         String cartKey = CART_PREFIX + userId;
         BoundHashOperations<String, Object, Object> cartOps = redisTemplate.boundHashOps(cartKey);
         String res = (String) cartOps.get(skuId.toString());
@@ -126,18 +124,22 @@ public class CartServiceImpl implements CartService {
     @Override
     public List<CartItem> getUserCartItems() {
         UserInfoTo userInfoTo = CartInterceptor.threadLocal.get();
-        if (userInfoTo == null) return null;
+        if (userInfoTo == null) return Collections.emptyList();
         String cartKey = CART_PREFIX + userInfoTo.getUserId();
         List<CartItem> cartItems = getCartItems(cartKey);
         if (cartItems != null) {
             return cartItems.stream().filter(CartItem::getCheck).collect(Collectors.toList());
         }
-        return null;
+        return Collections.emptyList();
     }
 
     @Override
     public void checkItem(Long skuId, Integer check) {
-        String cartKey = CART_PREFIX + CartInterceptor.threadLocal.get().getUserId();
+        UserInfoTo userInfoTo = CartInterceptor.threadLocal.get();
+        if (userInfoTo == null) {
+            return;
+        }
+        String cartKey = CART_PREFIX + userInfoTo.getUserId();
         BoundHashOperations<String, Object, Object> cartOps = redisTemplate.boundHashOps(cartKey);
         String json = (String) cartOps.get(skuId.toString());
         if (json != null) {
@@ -150,9 +152,9 @@ public class CartServiceImpl implements CartService {
     private List<CartItem> getCartItems(String cartKey) {
         BoundHashOperations<String, Object, Object> operations = redisTemplate.boundHashOps(cartKey);
         List<Object> values = operations.values();
-        if (values != null && values.size() > 0) {
+        if (values != null && !values.isEmpty()) {
             return values.stream().map(obj -> JSON.parseObject((String) obj, CartItem.class)).collect(Collectors.toList());
         }
-        return null;
+        return Collections.emptyList();
     }
 }

@@ -6,14 +6,21 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.session.web.http.CookieSerializer;
 import org.springframework.session.web.http.DefaultCookieSerializer;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 public class GulimailSessionConfig {
+    @Value("${gulimail.order.session.secure:false}")
+    private boolean secureCookie;
+
     @Bean
     public CookieSerializer cookieSerializer() {
         DefaultCookieSerializer cookieSerializer = new DefaultCookieSerializer();
         cookieSerializer.setDomainName("gulimail.com");
         cookieSerializer.setCookieName("GULISESSION");
+        cookieSerializer.setUseHttpOnlyCookie(true);
+        cookieSerializer.setSameSite("Lax");
+        cookieSerializer.setUseSecureCookie(secureCookie);
         return cookieSerializer;
     }
 

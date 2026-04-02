@@ -11,6 +11,7 @@ import com.lg.gulimail.ware.service.PurchaseDetailService;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -54,6 +55,14 @@ public class PurchaseDetailServiceImpl extends ServiceImpl<PurchaseDetailDao, Pu
     @Override
     public List<PurchaseDetailEntity> listDetailByPurchaseId(Long purchaseId) {
         return this.list(new QueryWrapper<PurchaseDetailEntity>().eq("purchase_id", purchaseId));
+    }
+
+    @Override
+    public List<PurchaseDetailEntity> listDetailByPurchaseIds(List<Long> purchaseIds) {
+        if (purchaseIds == null || purchaseIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return this.list(new QueryWrapper<PurchaseDetailEntity>().in("purchase_id", purchaseIds));
     }
 
 }

@@ -1,6 +1,7 @@
 package com.lg.common.exception;
 
 import com.lg.common.utils.R;
+import com.lg.common.utils.RRException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -27,16 +28,15 @@ public class GulimailExceptionControllerAdvice {
                 .put("data", errorMap);
     }
 
+    @ExceptionHandler(value = RRException.class)
+    public R handleRRException(RRException e) {
+        log.warn("业务异常：{}", e.getMsg());
+        return R.error(e.getCode(), e.getMsg());
+    }
+
     @ExceptionHandler(value = Throwable.class)
     public R handleException(Throwable t) {
         log.error("错误：", t);
-        // 使用枚举类定义的 10000 状态码
         return R.error(BizCodeEnum.UNKNOW_EXCEPTION.getCode(), BizCodeEnum.UNKNOW_EXCEPTION.getMsg());
-    }
-    @ExceptionHandler(Exception.class)
-    public void handleResourceNotFound(Exception e) {
-        if (e.getClass().getName().equals("org.springframework.web.servlet.resource.NoResourceFoundException")) {
-            log.warn("静态资源不存在");
-        }
     }
 }

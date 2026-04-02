@@ -4,6 +4,9 @@ import java.util.Arrays;
 import java.util.Map;
 
 //import org.apache.shiro.authz.annotation.RequiresPermissions;
+import com.lg.common.exception.BizCodeEnum;
+import com.lg.gulimail.product.application.item.SkuItemApplicationService;
+import com.lg.gulimail.product.domain.item.SkuItemResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,6 +33,8 @@ import com.lg.common.utils.R;
 public class SkuInfoController {
     @Autowired
     private SkuInfoService skuInfoService;
+    @Autowired
+    private SkuItemApplicationService skuItemApplicationService;
 
     /**
      * 列表
@@ -49,6 +54,9 @@ public class SkuInfoController {
     @RequestMapping("/info/{skuId}")
     //@RequiresPermissions("product:skuinfo:info")
     public R info(@PathVariable("skuId") Long skuId){
+        if (skuId == null || skuId < 1) {
+            return R.error(BizCodeEnum.VAILD_EXCEPTION.getCode(), "skuId参数非法");
+        }
 		SkuInfoEntity skuInfo = skuInfoService.getById(skuId);
 
         return R.ok().put("skuInfo", skuInfo);
@@ -59,8 +67,11 @@ public class SkuInfoController {
      */
     @RequestMapping("/api/item/{skuId}")
     public R getSkuItem(@PathVariable("skuId") Long skuId){
-        com.lg.gulimail.product.vo.SkuItemVo itemVo = skuInfoService.item(skuId);
-        return R.ok().put("data", itemVo);
+        SkuItemResult result = skuItemApplicationService.queryItem(skuId);
+        if (!result.isSuccess()) {
+            return R.error(result.getCode(), result.getMessage());
+        }
+        return R.ok().put("data", result.getItem());
     }
 
     /**
@@ -69,6 +80,9 @@ public class SkuInfoController {
     @RequestMapping("/save")
     //@RequiresPermissions("product:skuinfo:save")
     public R save(@RequestBody SkuInfoEntity skuInfo){
+        if (skuInfo == null) {
+            return R.error(BizCodeEnum.VAILD_EXCEPTION.getCode(), "请求参数不能为空");
+        }
 		skuInfoService.save(skuInfo);
 
         return R.ok();
@@ -80,6 +94,9 @@ public class SkuInfoController {
     @RequestMapping("/update")
     //@RequiresPermissions("product:skuinfo:update")
     public R update(@RequestBody SkuInfoEntity skuInfo){
+        if (skuInfo == null || skuInfo.getSkuId() == null) {
+            return R.error(BizCodeEnum.VAILD_EXCEPTION.getCode(), "请求参数不能为空");
+        }
 		skuInfoService.updateById(skuInfo);
 
         return R.ok();
@@ -91,6 +108,9 @@ public class SkuInfoController {
     @RequestMapping("/delete")
     //@RequiresPermissions("product:skuinfo:delete")
     public R delete(@RequestBody Long[] skuIds){
+        if (skuIds == null || skuIds.length == 0) {
+            return R.error(BizCodeEnum.VAILD_EXCEPTION.getCode(), "skuIds不能为空");
+        }
 		skuInfoService.removeByIds(Arrays.asList(skuIds));
 
         return R.ok();

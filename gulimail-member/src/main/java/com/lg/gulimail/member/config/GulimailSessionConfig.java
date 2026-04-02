@@ -11,15 +11,15 @@ import org.springframework.session.web.http.DefaultCookieSerializer;
 public class GulimailSessionConfig {
     @Bean
     public RedisSerializer<Object> springSessionDefaultRedisSerializer() {
-        System.out.println("✅ 确认：自定义 JSON 序列化器已成功加载！");
-        // 使用 Jackson2JsonRedisSerializer 或者 GenericJackson2JsonRedisSerializer
         return new GenericJackson2JsonRedisSerializer();
     }
     @Bean
     public CookieSerializer cookieSerializer() {
         DefaultCookieSerializer serializer = new DefaultCookieSerializer();
-        serializer.setDomainName("gulimail.com"); // 必须有这一行！
+        serializer.setDomainName("gulimail.com");
         serializer.setCookieName("GULISESSION");
+        serializer.setUseHttpOnlyCookie(true);
+        serializer.setSameSite("Lax");
         return serializer;
     }
 }

@@ -43,6 +43,9 @@ public class SkuFullReductionController {
     @RequestMapping("/info/{id}")
     //@RequiresPermissions("coupon:skufullreduction:info")
     public R info(@PathVariable("id") Long id){
+        if (id == null || id < 1) {
+            return R.error(10001, "id参数非法");
+        }
 		SkuFullReductionEntity skuFullReduction = skuFullReductionService.getById(id);
 
         return R.ok().put("skuFullReduction", skuFullReduction);
@@ -54,6 +57,9 @@ public class SkuFullReductionController {
     @RequestMapping("/save")
     //@RequiresPermissions("coupon:skufullreduction:save")
     public R save(@RequestBody SkuFullReductionEntity skuFullReduction){
+        if (skuFullReduction == null) {
+            return R.error(10001, "请求参数不能为空");
+        }
 		skuFullReductionService.save(skuFullReduction);
 
         return R.ok();
@@ -64,6 +70,9 @@ public class SkuFullReductionController {
      */
     @PostMapping("/saveinfo")
     public R saveinfo(@RequestBody com.lg.common.to.SkuReductionTo skuReductionTo){
+        if (skuReductionTo == null || skuReductionTo.getSkuId() == null || skuReductionTo.getSkuId() < 1) {
+            return R.error(10001, "skuId参数非法");
+        }
         // 调用 Service 层处理多表保存逻辑
         skuFullReductionService.saveSkuReduction(skuReductionTo);
         return R.ok();
@@ -74,6 +83,9 @@ public class SkuFullReductionController {
     @RequestMapping("/update")
     //@RequiresPermissions("coupon:skufullreduction:update")
     public R update(@RequestBody SkuFullReductionEntity skuFullReduction){
+        if (skuFullReduction == null || skuFullReduction.getId() == null) {
+            return R.error(10001, "请求参数不能为空");
+        }
 		skuFullReductionService.updateById(skuFullReduction);
 
         return R.ok();
@@ -85,6 +97,9 @@ public class SkuFullReductionController {
     @RequestMapping("/delete")
     //@RequiresPermissions("coupon:skufullreduction:delete")
     public R delete(@RequestBody Long[] ids){
+        if (ids == null || ids.length == 0) {
+            return R.error(10001, "ids不能为空");
+        }
 		skuFullReductionService.removeByIds(Arrays.asList(ids));
 
         return R.ok();

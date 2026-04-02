@@ -3,15 +3,45 @@ spring:
     redis:
       host: 192.168.10.101
       port: 6379
+gulimail:
+  search:
+    es:
+      host: 192.168.10.101
+      port: 9200
+      scheme: http
+    page-size: 16
+    session:
+      secure: false
+logging:
+  level:
+    com.lg.gulimail: debug
+  pattern:
+    level: "%5p [${spring.application.name:-},%X{traceId:-},%X{spanId:-}]"
+
 management:
   health:
     elasticsearch:
       enabled: false
   zipkin:
     tracing:
-          # 错误写法：http://localhost:9411/api/v2/spans
-          # 正确写法：改成你 Linux 服务器的真实 IP
-          endpoint: http://192.168.10.101:9411/api/v2/spans
+      endpoint: http://192.168.10.101:9411/api/v2/spans
   tracing:
     sampling:
-          probability: 1.0  # 确保 100% 采样，方便调试
+      probability: 1.0
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+seata:
+  tx-service-group: gulimail-search-tx-group
+  service:
+    vgroup-mapping:
+      gulimail-search-tx-group: default
+  registry:
+    type: nacos
+    nacos:
+      server-addr: 127.0.0.1:8848
+      namespace: ""
+      group: SEATA_GROUP
+      application: seata-server

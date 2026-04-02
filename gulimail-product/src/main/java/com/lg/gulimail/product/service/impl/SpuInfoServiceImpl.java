@@ -68,6 +68,7 @@ public class SpuInfoServiceImpl extends ServiceImpl<SpuInfoDao, SpuInfoEntity> i
 
         return new PageUtils(page);
     }
+    @io.seata.spring.annotation.GlobalTransactional // 开启分布式事务
     @Transactional // 涉及到多表操作，必须加事务
     @Override
     public void saveSpuInfo(SpuSaveVo vo) {
@@ -246,17 +247,20 @@ public class SpuInfoServiceImpl extends ServiceImpl<SpuInfoDao, SpuInfoEntity> i
             log.error("库存服务查询异常：{}", e);
         }
 
-        // 4. 封装 SKU 信息，并【过滤】掉没有库存的 SKU
+        Set<Long> brandIds = skus.stream().map(SkuInfoEntity::getBrandId).collect(Collectors.toSet());
+        Set<Long> categoryIds = skus.stream().map(SkuInfoEntity::getCatalogId).collect(Collectors.toSet());
+        Map<Long, BrandEntity> brandMap = brandService.listByIds(brandIds).stream()
+                .collect(Collectors.toMap(BrandEntity::getBrandId, item -> item));
+        Map<Long, CategoryEntity> categoryMap = categoryService.listByIds(categoryIds).stream()
+                .collect(Collectors.toMap(CategoryEntity::getCatId, item -> item));
+
         Map<Long, Boolean> finalStockMap = stockMap;
         List<SkuEsModel> upProducts = skus.stream()
                 .filter(sku -> {
-                    // --- 核心修改：检查是否有库存 ---
-                    // 如果库存 Map 为空，可能库存服务宕机，为了不影响业务，通常默认有货(true)或跳过(false)
-                    // 这里建议：如果查不到库存信息，为了保险起见，暂不参与过滤，或者根据你的业务定
                     if (finalStockMap == null) {
                         return true;
                     }
-                    return finalStockMap.getOrDefault(sku.getSkuId(), false); // 只有库存为 true 的才留下
+                    return finalStockMap.getOrDefault(sku.getSkuId(), false);
                 })
                 .map(sku -> {
                     SkuEsModel esModel = new SkuEsModel();
@@ -266,12 +270,15 @@ public class SpuInfoServiceImpl extends ServiceImpl<SpuInfoDao, SpuInfoEntity> i
                     esModel.setHasStock(true); // 既然能经过上面的 filter，这里肯定是有货的
                     esModel.setHotScore(0L);
 
-                    // 查询品牌/分类名 (逻辑保持不变)
-                    BrandEntity brand = brandService.getById(esModel.getBrandId());
-                    esModel.setBrandName(brand.getName());
-                    esModel.setBrandImg(brand.getLogo());
-                    CategoryEntity category = categoryService.getById(esModel.getCatalogId());
-                    esModel.setCatalogName(category.getName());
+                    BrandEntity brand = brandMap.get(esModel.getBrandId());
+                    if (brand != null) {
+                        esModel.setBrandName(brand.getName());
+                        esModel.setBrandImg(brand.getLogo());
+                    }
+                    CategoryEntity category = categoryMap.get(esModel.getCatalogId());
+                    if (category != null) {
+                        esModel.setCatalogName(category.getName());
+                    }
                     esModel.setAttrs(attrsList);
                     return esModel;
                 }).collect(Collectors.toList());
@@ -294,8 +301,7 @@ public class SpuInfoServiceImpl extends ServiceImpl<SpuInfoDao, SpuInfoEntity> i
                 log.error("SPU: {} 上架失败，ES 服务报错", spuId);
             }
         } catch (Exception e) {
-            log.error("SPU: {} 上架异常，网络通讯失败", spuId);
-            e.printStackTrace();
+            log.error("SPU: {} 上架异常，网络通讯失败", spuId, e);
         }
     }
 

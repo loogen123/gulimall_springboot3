@@ -1,14 +1,19 @@
 package com.lg.gulimail.ware.controller;
 
+import com.lg.common.exception.BizCodeEnum;
+import com.lg.common.to.mq.WareSkuLockTo;
 import com.lg.common.utils.PageUtils;
 import com.lg.common.utils.R;
 import com.lg.common.vo.SkuHasStockVo;
+import com.lg.gulimail.ware.application.stock.OrderLockStockApplicationService;
+import com.lg.gulimail.ware.domain.stock.OrderLockStockResult;
 import com.lg.gulimail.ware.entity.WareSkuEntity;
 import com.lg.gulimail.ware.service.WareSkuService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -26,6 +31,8 @@ import java.util.Map;
 public class WareSkuController {
     @Autowired
     private WareSkuService wareSkuService;
+    @Autowired
+    private OrderLockStockApplicationService orderLockStockApplicationService;
 
     /**
      * 列表
@@ -41,7 +48,9 @@ public class WareSkuController {
         // 必须是 Post 方式，因为 Product 模块传的是 List<Long>
         @PostMapping("/hasstock")
         public R getSkusHasStock(@RequestBody List<Long> skuIds) {
-            // 返回的数据格式应该是 List<SkuHasStockVo>
+            if (skuIds == null || skuIds.isEmpty()) {
+                return R.ok().setData(Collections.emptyList());
+            }
             List<SkuHasStockVo> vos = wareSkuService.getSkusHasStock(skuIds);
             return R.ok().setData(vos);
         }
@@ -63,6 +72,9 @@ public class WareSkuController {
     @RequestMapping("/save")
     //@RequiresPermissions("ware:waresku:save")
     public R save(@RequestBody WareSkuEntity wareSku){
+        if (wareSku == null) {
+            return R.error(BizCodeEnum.VAILD_EXCEPTION.getCode(), "请求参数不能为空");
+        }
 		wareSkuService.save(wareSku);
 
         return R.ok();
@@ -74,6 +86,9 @@ public class WareSkuController {
     @RequestMapping("/update")
     //@RequiresPermissions("ware:waresku:update")
     public R update(@RequestBody WareSkuEntity wareSku){
+        if (wareSku == null || wareSku.getId() == null) {
+            return R.error(BizCodeEnum.VAILD_EXCEPTION.getCode(), "请求参数不能为空");
+        }
 		wareSkuService.updateById(wareSku);
 
         return R.ok();
@@ -85,20 +100,22 @@ public class WareSkuController {
     @RequestMapping("/delete")
     //@RequiresPermissions("ware:waresku:delete")
     public R delete(@RequestBody Long[] ids){
+        if (ids == null || ids.length == 0) {
+            return R.error(BizCodeEnum.VAILD_EXCEPTION.getCode(), "ids不能为空");
+        }
 		wareSkuService.removeByIds(Arrays.asList(ids));
 
         return R.ok();
     }
     @PostMapping("/lock/order")
-    public R orderLockStock(@RequestBody com.lg.common.to.mq.WareSkuLockTo vo) {
-        try {
-            // 调用 Service 层执行锁定逻辑
-            Boolean lock = wareSkuService.orderLockStock(vo);
+    public R orderLockStock(@RequestBody WareSkuLockTo vo) {
+        OrderLockStockResult result = orderLockStockApplicationService.lockStock(vo);
+        if (result.isSuccess()) {
             return R.ok();
-        } catch (com.lg.common.exception.NoStockException e) {
-            // 如果 Service 抛出了自定义的库存不足异常，返回对应的错误码
-            return R.error(com.lg.common.exception.BizCodeEnum.NO_STOCK_EXCEPTION.getCode(),
-                    com.lg.common.exception.BizCodeEnum.NO_STOCK_EXCEPTION.getMsg());
         }
+        if (result.getCode() == BizCodeEnum.NO_STOCK_EXCEPTION.getCode()) {
+            return R.error(BizCodeEnum.NO_STOCK_EXCEPTION);
+        }
+        return R.error(result.getCode(), result.getMessage());
     }
 }

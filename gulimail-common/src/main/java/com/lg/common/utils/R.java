@@ -9,6 +9,7 @@ package com.lg.common.utils;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
+import com.lg.common.exception.BizCodeEnum;
 import org.apache.http.HttpStatus;
 
 import java.util.HashMap;
@@ -41,6 +42,10 @@ public class R extends HashMap<String, Object> {
 		return r;
 	}
 
+	public static R error(BizCodeEnum bizCodeEnum) {
+		return error(bizCodeEnum.getCode(), bizCodeEnum.getMsg());
+	}
+
 	public static R ok(String msg) {
 		R r = new R();
 		r.put("msg", msg);
@@ -55,6 +60,13 @@ public class R extends HashMap<String, Object> {
 	
 	public static R ok() {
 		return new R();
+	}
+
+	public static R ok(BizCodeEnum bizCodeEnum) {
+		R r = new R();
+		r.put("code", bizCodeEnum.getCode());
+		r.put("msg", bizCodeEnum.getMsg());
+		return r;
 	}
 
 	@Override

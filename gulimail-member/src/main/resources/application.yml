@@ -1,4 +1,6 @@
 spring:
+  flyway:
+    enabled: false
   datasource:
     username: root
     password: root
@@ -12,8 +14,8 @@ spring:
     name: gulimail-member
   data:
     redis:
-          host: 192.168.10.101  # 这里的 IP 必须和你 Nacos、DB 所在的服务器一致
-          port: 6379
+      host: 192.168.10.101
+      port: 6379
   session:
     store-type: redis # 明确指定使用 redis 存储 session
 mybatis-plus:
@@ -23,12 +25,21 @@ mybatis-plus:
       id-type: auto
 server:
   port: 8000
+logging:
+  level:
+    com.lg.gulimail: debug
+  pattern:
+    level: "%5p [${spring.application.name:-},%X{traceId:-},%X{spanId:-}]"
+
 management:
   zipkin:
     tracing:
-      # 错误写法：http://localhost:9411/api/v2/spans
-      # 正确写法：改成你 Linux 服务器的真实 IP
       endpoint: http://192.168.10.101:9411/api/v2/spans
   tracing:
     sampling:
-      probability: 1.0  # 确保 100% 采样，方便调试
+      probability: 1.0
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+

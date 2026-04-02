@@ -9,3 +9,9 @@
 
 当前预警：
 - 当前无预警
+
+潜在阻塞（记录型，不等同于已触发预警）：
+- gulimail-seckill：测试启动会连接外部 Redis（固定地址），在 CI/新环境可能失败
+- gulimail-search：测试需要可用的 Elasticsearch 服务（虽已改为自动建索引/写入样例数据，但仍依赖 ES 运行态）
+- 全局：测试启动依赖 Nacos 可达（本机默认 127.0.0.1:8848）
+- 依赖安全扫描：OWASP Dependency-Check 在无 NVD API Key 条件下更新极慢，完整扫描报告存在交付延迟风险

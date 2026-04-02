@@ -60,6 +60,9 @@ public class CouponHistoryController {
     @RequestMapping("/save")
     //@RequiresPermissions("coupon:couponhistory:save")
     public R save(@RequestBody CouponHistoryEntity couponHistory){
+        if (couponHistory == null) {
+            return R.error(10001, "请求参数不能为空");
+        }
 		couponHistoryService.save(couponHistory);
 
         return R.ok();
@@ -71,6 +74,9 @@ public class CouponHistoryController {
     @RequestMapping("/update")
     //@RequiresPermissions("coupon:couponhistory:update")
     public R update(@RequestBody CouponHistoryEntity couponHistory){
+        if (couponHistory == null || couponHistory.getId() == null) {
+            return R.error(10001, "请求参数不能为空");
+        }
 		couponHistoryService.updateById(couponHistory);
 
         return R.ok();
@@ -82,6 +88,9 @@ public class CouponHistoryController {
     @RequestMapping("/delete")
     //@RequiresPermissions("coupon:couponhistory:delete")
     public R delete(@RequestBody Long[] ids){
+        if (ids == null || ids.length == 0) {
+            return R.error(10001, "ids不能为空");
+        }
 		couponHistoryService.removeByIds(Arrays.asList(ids));
 
         return R.ok();

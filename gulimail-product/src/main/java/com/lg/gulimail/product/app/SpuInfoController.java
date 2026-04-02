@@ -55,6 +55,9 @@ public class SpuInfoController {
     @RequestMapping("/save")
     //@RequiresPermissions("product:spuinfo:save")
     public R save(@RequestBody SpuSaveVo vo){
+        if (vo == null) {
+            return R.error(10001, "请求参数不能为空");
+        }
 		spuInfoService.saveSpuInfo(vo);
 
         return R.ok();
@@ -66,6 +69,9 @@ public class SpuInfoController {
     @RequestMapping("/update")
     //@RequiresPermissions("product:spuinfo:update")
     public R update(@RequestBody SpuInfoEntity spuInfo){
+        if (spuInfo == null || spuInfo.getId() == null) {
+            return R.error(10001, "请求参数不能为空");
+        }
 		spuInfoService.updateById(spuInfo);
 
         return R.ok();
@@ -77,6 +83,9 @@ public class SpuInfoController {
     @RequestMapping("/delete")
     //@RequiresPermissions("product:spuinfo:delete")
     public R delete(@RequestBody Long[] ids){
+        if (ids == null || ids.length == 0) {
+            return R.error(10001, "ids不能为空");
+        }
 		spuInfoService.removeByIds(Arrays.asList(ids));
 
         return R.ok();
@@ -87,6 +96,9 @@ public class SpuInfoController {
      */
     @PostMapping("/{spuId}/up")
     public R spuUp(@PathVariable("spuId") Long spuId){
+        if (spuId == null || spuId < 1) {
+            return R.error(10001, "spuId参数非法");
+        }
         // 调用 service 层封装的复杂业务逻辑
         spuInfoService.up(spuId);
 

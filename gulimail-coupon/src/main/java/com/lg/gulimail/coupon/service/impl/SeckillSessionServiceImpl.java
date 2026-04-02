@@ -17,6 +17,7 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,26 +30,26 @@ public class SeckillSessionServiceImpl extends ServiceImpl<SeckillSessionDao, Se
 
     @Override
     public List<SeckillSessionEntity> getLatest3DaysSession() {
-        // 1. 计算未来三天的起止时间
-        // 今天 00:00:00 -> 后天 23:59:59
         String startTime = LocalDateTime.now().with(LocalTime.MIN).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         String endTime = LocalDateTime.now().plusDays(2).with(LocalTime.MAX).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
-        // 2. 查询符合时间范围的秒杀场次
         List<SeckillSessionEntity> sessions = this.list(new QueryWrapper<SeckillSessionEntity>()
                 .between("start_time", startTime, endTime));
 
-        if (sessions != null && !sessions.isEmpty()) {
-            // 3. 关联查询出每个场次下所有的商品项 (SKU_RELATION)
-            return sessions.stream().map(session -> {
-                List<SeckillSkuRelationEntity> skus = seckillSkuRelationService.list(
-                        new QueryWrapper<SeckillSkuRelationEntity>().eq("promotion_session_id", session.getId())
-                );
-                session.setRelationEntities(skus);
-                return session;
-            }).collect(Collectors.toList());
+        if (sessions == null || sessions.isEmpty()) {
+            return Collections.emptyList();
         }
-        return null;
+
+        List<Long> sessionIds = sessions.stream().map(SeckillSessionEntity::getId).collect(Collectors.toList());
+        List<SeckillSkuRelationEntity> relationEntities = seckillSkuRelationService.list(
+                new QueryWrapper<SeckillSkuRelationEntity>().in("promotion_session_id", sessionIds)
+        );
+        Map<Long, List<SeckillSkuRelationEntity>> relationMap = relationEntities.stream()
+                .collect(Collectors.groupingBy(SeckillSkuRelationEntity::getPromotionSessionId));
+        sessions.forEach(session -> session.setRelationEntities(
+                relationMap.getOrDefault(session.getId(), Collections.emptyList())
+        ));
+        return sessions;
     }
 
     @Override

@@ -1,0 +1,2 @@
+-- Initial baseline migration script
+-- Flyway requires at least one script to run

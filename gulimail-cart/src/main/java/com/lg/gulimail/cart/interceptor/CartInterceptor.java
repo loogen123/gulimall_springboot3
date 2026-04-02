@@ -1,5 +1,6 @@
 package com.lg.gulimail.cart.interceptor;
 
+import com.lg.common.constant.AuthServerConstant;
 import com.lg.common.vo.MemberResponseVo;
 import com.lg.gulimail.cart.to.UserInfoTo;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,6 +9,9 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 @Component
 public class CartInterceptor implements HandlerInterceptor {
 
@@ -15,28 +19,28 @@ public class CartInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-
-        HttpSession session = request.getSession();
-        MemberResponseVo user = (MemberResponseVo) session.getAttribute("loginUser");
+        HttpSession session = request.getSession(false);
+        MemberResponseVo user = session == null ? null : (MemberResponseVo) session.getAttribute(AuthServerConstant.LOGIN_USER);
 
         if (user != null) {
-            // 1. 已登录：封装用户信息到 UserInfoTo 供 Service 使用
             UserInfoTo userInfoTo = new UserInfoTo();
             userInfoTo.setUserId(user.getId());
-
             threadLocal.set(userInfoTo);
             return true;
-        } else {
-            // 2. 未登录：拦截并跳转到认证中心
-            session.setAttribute("msg", "购物车功能需登录后使用");
-            response.sendRedirect("http://auth.gulimail.com/login.html?originUrl=" + request.getRequestURL());
-            return false;
         }
+        request.getSession().setAttribute("msg", "购物车功能需登录后使用");
+        String originUrl = request.getRequestURL().toString();
+        String queryString = request.getQueryString();
+        if (queryString != null && !queryString.isBlank()) {
+            originUrl = originUrl + "?" + queryString;
+        }
+        String encodedOriginUrl = URLEncoder.encode(originUrl, StandardCharsets.UTF_8);
+        response.sendRedirect("http://auth.gulimail.com/login.html?originUrl=" + encodedOriginUrl);
+        return false;
     }
 
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
-        // 请求结束，一定要清理，否则线程池复用会导致用户信息串位
         threadLocal.remove();
     }
 }

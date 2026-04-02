@@ -6,21 +6,26 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.session.web.http.CookieSerializer;
 import org.springframework.session.web.http.DefaultCookieSerializer;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 public class GulimailSessionConfig {
+    @Value("${gulimail.cart.session.secure:false}")
+    private boolean secureCookie;
+
     @Bean
     public CookieSerializer cookieSerializer() {
         DefaultCookieSerializer cookieSerializer = new DefaultCookieSerializer();
-        // 1. 关键：放大作用域到父域名，解决跨子域名访问
-        cookieSerializer.setDomainName("gulimail.com"); 
+        cookieSerializer.setDomainName("gulimail.com");
         cookieSerializer.setCookieName("GULISESSION");
+        cookieSerializer.setUseHttpOnlyCookie(true);
+        cookieSerializer.setSameSite("Lax");
+        cookieSerializer.setUseSecureCookie(secureCookie);
         return cookieSerializer;
     }
 
     @Bean
     public RedisSerializer<Object> springSessionDefaultRedisSerializer() {
-        // 2. 关键：使用 JSON 序列化，且必须与 Auth 模块一致
         return new GenericJackson2JsonRedisSerializer();
     }
 }

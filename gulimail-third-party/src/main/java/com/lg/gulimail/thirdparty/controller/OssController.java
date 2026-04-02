@@ -7,6 +7,7 @@ import com.aliyun.oss.model.PolicyConditions;
 import com.lg.common.utils.R;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -17,6 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
+@ConditionalOnBean(OSS.class)
 public class OssController {
 
     @Autowired
@@ -62,7 +64,7 @@ public class OssController {
             respMap.put("expire", String.valueOf(expireEndTime / 1000));
 
         } catch (Exception e) {
-            return R.error("生成签名失败：" + e.getMessage());
+            return R.error("生成签名失败");
         }
 
         return R.ok().put("data", respMap);

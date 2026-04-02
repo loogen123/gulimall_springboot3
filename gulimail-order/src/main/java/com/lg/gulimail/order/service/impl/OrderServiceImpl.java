@@ -7,9 +7,11 @@ import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.lg.common.to.OrderTo;
 import com.lg.common.to.SeckillOrderTo;
+import com.lg.common.exception.BizCodeEnum;
 import com.lg.common.utils.PageUtils;
 import com.lg.common.utils.Query;
 import com.lg.common.utils.R;
+import com.lg.common.utils.RRException;
 import com.lg.common.vo.FareVo;
 import com.lg.common.vo.MemberAddressVo;
 import com.lg.common.vo.MemberResponseVo;
@@ -22,6 +24,7 @@ import com.lg.gulimail.order.entity.OrderItemEntity;
 import com.lg.gulimail.order.entity.PaymentInfoEntity;
 import com.lg.gulimail.order.exception.NoStockException;
 import com.lg.gulimail.order.feign.CartFeignService;
+import com.lg.gulimail.order.feign.CouponFeignService;
 import com.lg.gulimail.order.feign.MemberFeignService;
 import com.lg.gulimail.order.feign.WmsFeignService;
 import com.lg.gulimail.order.interceptor.LoginUserInterceptor;
@@ -57,6 +60,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
 
     @Autowired
     private CartFeignService cartFeignService;
+
+    @Autowired
+    private CouponFeignService couponFeignService;
 
     @Autowired
     private ThreadPoolExecutor executor;
@@ -138,7 +144,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
         createTo.setOrderItems(itemEntities);
 
         // 4. 计算价格相关（验价逻辑的核心）
-        computePrice(orderEntity, itemEntities);
+        computePrice(orderEntity, itemEntities, vo);
 
         return createTo;
     }
@@ -168,7 +174,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
         // 2. 【核心修复】增加非空校验，防止 NPE
         if (fareResp == null || fareResp.getAddress() == null) {
             // 抛出自定义异常，让 OrderWebController 的 catch 块捕获并重定向回确认页
-            throw new RuntimeException("无法获取收货地址详细信息，请检查地址是否有效或联系管理员");
+            throw new RRException("无法获取收货地址详细信息，请检查地址是否有效或联系管理员", BizCodeEnum.NOT_FOUND_EXCEPTION.getCode());
         }
 
         // 3. 安全地提取数据
@@ -197,18 +203,84 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
         // ...
         return item;
     }
-    private void computePrice(OrderEntity orderEntity, List<OrderItemEntity> itemEntities) {
-        BigDecimal total = new BigDecimal("0.0");
-        // 1. 叠加每一个订单项的总额
+    private void computePrice(OrderEntity orderEntity, List<OrderItemEntity> itemEntities, OrderSubmitVo vo) {
+        if (itemEntities == null || itemEntities.isEmpty()) {
+            throw new RRException("未选中任何商品，无法提交订单", BizCodeEnum.VAILD_EXCEPTION.getCode());
+        }
+        BigDecimal total = BigDecimal.ZERO;
         for (OrderItemEntity item : itemEntities) {
             BigDecimal itemPrice = item.getSkuPrice().multiply(new BigDecimal(item.getSkuQuantity()));
             total = total.add(itemPrice);
         }
+        BigDecimal freight = orderEntity.getFreightAmount() == null ? BigDecimal.ZERO : orderEntity.getFreightAmount();
+        OrderBenefitQuoteVo benefitQuote = quoteBenefits(vo, total);
+        BigDecimal couponAmount = benefitQuote.getCouponAmount() == null ? BigDecimal.ZERO : benefitQuote.getCouponAmount();
+        BigDecimal integrationAmount = benefitQuote.getIntegrationAmount() == null ? BigDecimal.ZERO : benefitQuote.getIntegrationAmount();
+        orderEntity.setTotalAmount(total);
+        orderEntity.setCouponId(benefitQuote.getCouponId());
+        orderEntity.setUseIntegration(benefitQuote.getUseIntegration());
+        orderEntity.setCouponAmount(couponAmount);
+        orderEntity.setIntegrationAmount(integrationAmount);
+        orderEntity.setPromotionAmount(BigDecimal.ZERO);
+        orderEntity.setDiscountAmount(BigDecimal.ZERO);
+        BigDecimal payAmount = total.add(freight).subtract(couponAmount).subtract(integrationAmount);
+        orderEntity.setPayAmount(payAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : payAmount);
+    }
 
-        // 2. 设置订单价格数据
-        orderEntity.setTotalAmount(total); // 商品总额
-        // 应付总额 = 商品总额 + 运费 (实际开发还需减去优惠券、积分等，目前先简化)
-        orderEntity.setPayAmount(total.add(orderEntity.getFreightAmount()));
+    private OrderBenefitQuoteVo quoteBenefits(OrderSubmitVo vo, BigDecimal total) {
+        OrderBenefitQuoteVo quote = new OrderBenefitQuoteVo();
+        if (vo == null || total == null || total.compareTo(BigDecimal.ZERO) <= 0) {
+            return quote;
+        }
+        int requestIntegration = vo.getUseIntegration() == null ? 0 : vo.getUseIntegration();
+        if (requestIntegration > 0) {
+            Map<String, Object> request = new HashMap<>();
+            request.put("memberId", LoginUserInterceptor.loginUser.get().getId());
+            request.put("useIntegration", requestIntegration);
+            request.put("orderTotal", total);
+            R integrationResp = memberFeignService.quoteIntegration(request);
+            if (integrationResp.getCode() != 0) {
+                throw new RRException((String) integrationResp.get("msg"), BizCodeEnum.VAILD_EXCEPTION.getCode());
+            }
+            Integer useIntegration = integrationResp.getData("useIntegration", new TypeReference<Integer>() {});
+            BigDecimal integrationAmount = integrationResp.getData("integrationAmount", new TypeReference<BigDecimal>() {});
+            quote.setUseIntegration(useIntegration == null ? 0 : useIntegration);
+            quote.setIntegrationAmount(integrationAmount == null ? BigDecimal.ZERO : integrationAmount);
+        }
+        if (vo.getCouponId() != null) {
+            R couponResp = couponFeignService.getCouponInfo(vo.getCouponId());
+            if (couponResp.getCode() != 0) {
+                throw new RRException("优惠券不存在或不可用", BizCodeEnum.VAILD_EXCEPTION.getCode());
+            }
+            CouponInfoVo coupon = couponResp.getData("coupon", new TypeReference<CouponInfoVo>() {});
+            if (coupon == null || coupon.getId() == null) {
+                throw new RRException("优惠券不存在或不可用", BizCodeEnum.VAILD_EXCEPTION.getCode());
+            }
+            Date now = new Date();
+            if (coupon.getPublish() != null && coupon.getPublish() == 0) {
+                throw new RRException("优惠券未发布", BizCodeEnum.VAILD_EXCEPTION.getCode());
+            }
+            if (coupon.getStartTime() != null && now.before(coupon.getStartTime())) {
+                throw new RRException("优惠券未到生效时间", BizCodeEnum.VAILD_EXCEPTION.getCode());
+            }
+            if (coupon.getEndTime() != null && now.after(coupon.getEndTime())) {
+                throw new RRException("优惠券已过期", BizCodeEnum.VAILD_EXCEPTION.getCode());
+            }
+            if (coupon.getMinPoint() != null && total.compareTo(coupon.getMinPoint()) < 0) {
+                throw new RRException("订单金额未达到优惠券门槛", BizCodeEnum.VAILD_EXCEPTION.getCode());
+            }
+            BigDecimal couponAmount = coupon.getAmount() == null ? BigDecimal.ZERO : coupon.getAmount();
+            if (couponAmount.compareTo(BigDecimal.ZERO) < 0) {
+                couponAmount = BigDecimal.ZERO;
+            }
+            BigDecimal maxCouponAmount = total.subtract(quote.getIntegrationAmount());
+            if (couponAmount.compareTo(maxCouponAmount) > 0) {
+                couponAmount = maxCouponAmount;
+            }
+            quote.setCouponId(coupon.getId());
+            quote.setCouponAmount(couponAmount);
+        }
+        return quote;
     }
     @Override
     public OrderEntity getOrderByOrderSn(String orderSn) {
@@ -239,7 +311,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
         // 注意：这里需要确保 orderItemService 已经注入
         orderItemService.saveBatch(orderItems);
     }
-    @Transactional // 开启事务
+    @io.seata.spring.annotation.GlobalTransactional // 开启分布式事务
+    @Transactional // 开启本地事务
     @Override
     public SubmitOrderResponseVo submitOrder(OrderSubmitVo vo) {
         SubmitOrderResponseVo response = new SubmitOrderResponseVo();
@@ -313,26 +386,22 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
 
     @Override
     public void closeOrder(OrderEntity entity) {
-        // 1. 查询订单最新状态
-        OrderEntity orderEntity = this.getById(entity.getId());
-
-        // 2. 如果是待付款状态，则关单
-        if (orderEntity != null && orderEntity.getStatus().equals(OrderStatusEnum.CREATE_NEW.getCode())) {
-
-            // 【关键点】这里再多做一个补偿检查：去支付宝查询一下该订单真实的支付状态
-            // 只有支付宝也说没付钱，我们才真正关单（可选，但最稳妥）
-
-            OrderEntity update = new OrderEntity();
-            update.setId(entity.getId());
-            update.setStatus(OrderStatusEnum.CANCELED.getCode());
-
-            // 只有更新成功（利用乐观锁或状态行级锁），才去发解锁库存的消息
-            if (this.updateById(update)) {
-                OrderTo orderTo = new OrderTo();
-                BeanUtils.copyProperties(orderEntity, orderTo);
-                // 确保只在状态真正切换到“已取消”时，才通知库存解锁
-                rabbitTemplate.convertAndSend("order-event-exchange", "order.release.other", orderTo);
-            }
+        if (entity == null || entity.getId() == null) {
+            return;
+        }
+        int rows = this.baseMapper.updateOrderStatusByIdAndFromStatus(
+                entity.getId(),
+                OrderStatusEnum.CANCELED.getCode(),
+                OrderStatusEnum.CREATE_NEW.getCode()
+        );
+        if (rows > 0) {
+            OrderEntity latest = this.getById(entity.getId());
+            OrderEntity closedOrder = latest == null ? entity : latest;
+            revertMemberIntegrationIfNeeded(closedOrder);
+            revertCouponIfNeeded(closedOrder);
+            OrderTo orderTo = new OrderTo();
+            BeanUtils.copyProperties(entity, orderTo);
+            rabbitTemplate.convertAndSend("order-event-exchange", "order.release.other", orderTo);
         }
     }
 
@@ -374,6 +443,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
             int rows = this.baseMapper.updateOrderStatus(outTradeNo, OrderStatusEnum.PAYED.getCode());
 
             if (rows > 0) {
+                OrderEntity order = this.getOrderBySn(outTradeNo);
+                deductMemberIntegrationIfNeeded(order);
+                deductCouponIfNeeded(order);
                 // 3. 【核心修改】发送 OrderTo 而不是 OrderEntity
                 OrderTo orderTo = new OrderTo();
                 orderTo.setOrderSn(outTradeNo);
@@ -388,30 +460,90 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
         }
     }
 
+    private void deductMemberIntegrationIfNeeded(OrderEntity order) {
+        if (order == null || order.getMemberId() == null || order.getUseIntegration() == null || order.getUseIntegration() <= 0) {
+            return;
+        }
+        Map<String, Object> request = new HashMap<>();
+        request.put("memberId", order.getMemberId());
+        request.put("orderSn", order.getOrderSn());
+        request.put("useIntegration", order.getUseIntegration());
+        R r = memberFeignService.deductIntegration(request);
+        if (r.getCode() != 0) {
+            log.error("订单：{} 积分核销失败，msg={}", order.getOrderSn(), r.get("msg"));
+        }
+    }
+
+    private void revertMemberIntegrationIfNeeded(OrderEntity order) {
+        if (order == null || order.getMemberId() == null || order.getUseIntegration() == null || order.getUseIntegration() <= 0) {
+            return;
+        }
+        Map<String, Object> request = new HashMap<>();
+        request.put("memberId", order.getMemberId());
+        request.put("orderSn", order.getOrderSn());
+        request.put("useIntegration", order.getUseIntegration());
+        R r = memberFeignService.revertIntegration(request);
+        if (r.getCode() != 0) {
+            log.error("订单：{} 积分回滚失败，msg={}", order.getOrderSn(), r.get("msg"));
+        }
+    }
+
+    private void deductCouponIfNeeded(OrderEntity order) {
+        if (order == null || order.getMemberId() == null || order.getCouponId() == null || order.getCouponId() <= 0) {
+            return;
+        }
+        Map<String, Object> request = new HashMap<>();
+        request.put("memberId", order.getMemberId());
+        request.put("orderSn", order.getOrderSn());
+        request.put("orderId", order.getId());
+        request.put("couponId", order.getCouponId());
+        R r = couponFeignService.deductCoupon(request);
+        if (r.getCode() != 0) {
+            log.error("订单：{} 优惠券核销失败，msg={}", order.getOrderSn(), r.get("msg"));
+        }
+    }
+
+    private void revertCouponIfNeeded(OrderEntity order) {
+        if (order == null || order.getMemberId() == null || order.getCouponId() == null || order.getCouponId() <= 0) {
+            return;
+        }
+        Map<String, Object> request = new HashMap<>();
+        request.put("memberId", order.getMemberId());
+        request.put("orderSn", order.getOrderSn());
+        request.put("orderId", order.getId());
+        request.put("couponId", order.getCouponId());
+        R r = couponFeignService.revertCoupon(request);
+        if (r.getCode() != 0) {
+            log.error("订单：{} 优惠券回滚失败，msg={}", order.getOrderSn(), r.get("msg"));
+        }
+    }
+
     @Override
     public PageUtils queryPageWithItem(Map<String, Object> params) {
-        // 1. 获取当前登录的用户
         MemberResponseVo memberResponseVo = LoginUserInterceptor.loginUser.get();
-        params.put("limit", "10");
-        // 2. 查询该用户的所有订单
+        params.putIfAbsent("limit", "10");
         IPage<OrderEntity> page = this.page(
-                new Query<OrderEntity>().getPage(params), // 或者是 getPage(params, null, false)
+                new Query<OrderEntity>().getPage(params),
                 new QueryWrapper<OrderEntity>()
                         .eq("member_id", memberResponseVo.getId())
                         .orderByDesc("id")
         );
-
-        // 3. 遍历所有订单，查询并设置对应的订单项 (OrderItem)
-        List<OrderEntity> orderEntities = page.getRecords().stream().map(order -> {
-            List<OrderItemEntity> itemEntities = orderItemService.list(
-                    new QueryWrapper<OrderItemEntity>().eq("order_sn", order.getOrderSn())
-            );
-            order.setItemEntities(itemEntities); // 确保 OrderEntity 类里有这个 List<OrderItemEntity> 字段
-            return order;
-        }).collect(Collectors.toList());
-
-        // 4. 将处理后的记录重新放回 page 对象
-        page.setRecords(orderEntities);
+        List<OrderEntity> orders = page.getRecords();
+        if (orders == null || orders.isEmpty()) {
+            return new PageUtils(page);
+        }
+        List<String> orderSnList = orders.stream()
+                .map(OrderEntity::getOrderSn)
+                .collect(Collectors.toList());
+        List<OrderItemEntity> allOrderItems = orderItemService.list(
+                new QueryWrapper<OrderItemEntity>().in("order_sn", orderSnList)
+        );
+        Map<String, List<OrderItemEntity>> itemsByOrderSn = allOrderItems.stream()
+                .collect(Collectors.groupingBy(OrderItemEntity::getOrderSn));
+        orders.forEach(order -> order.setItemEntities(
+                itemsByOrderSn.getOrDefault(order.getOrderSn(), Collections.emptyList())
+        ));
+        page.setRecords(orders);
 
         return new PageUtils(page);
     }

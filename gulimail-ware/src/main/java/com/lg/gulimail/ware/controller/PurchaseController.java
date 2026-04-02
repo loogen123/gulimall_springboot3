@@ -42,6 +42,9 @@ public class PurchaseController {
      */
     @PostMapping("/received")
     public R received(@RequestBody List<Long> ids){
+        if (ids == null || ids.isEmpty()) {
+            return R.error(10001, "ids不能为空");
+        }
         purchaseService.receivePurchase(ids);
         return R.ok();
     }
@@ -51,6 +54,9 @@ public class PurchaseController {
      */
     @PostMapping("/done")
     public R finish(@RequestBody PurchaseDoneVo doneVo){
+        if (doneVo == null || doneVo.getId() == null) {
+            return R.error(10001, "请求参数不能为空");
+        }
         purchaseService.done(doneVo);
         return R.ok();
     }
@@ -67,6 +73,9 @@ public class PurchaseController {
     //合并采购单
     @PostMapping("/merge")
     public R merge(@RequestBody MergeVo mergeVo){
+        if (mergeVo == null || mergeVo.getItems() == null || mergeVo.getItems().isEmpty()) {
+            return R.error(10001, "请求参数不能为空");
+        }
         purchaseService.mergePurchase(mergeVo);
         return R.ok();
     }
@@ -88,6 +97,9 @@ public class PurchaseController {
     @RequestMapping("/save")
     //@RequiresPermissions("ware:purchase:save")
     public R save(@RequestBody PurchaseEntity purchase){
+        if (purchase == null) {
+            return R.error(10001, "请求参数不能为空");
+        }
 		purchaseService.save(purchase);
 
         return R.ok();
@@ -99,6 +111,9 @@ public class PurchaseController {
     @RequestMapping("/update")
     //@RequiresPermissions("ware:purchase:update")
     public R update(@RequestBody PurchaseEntity purchase){
+        if (purchase == null || purchase.getId() == null) {
+            return R.error(10001, "请求参数不能为空");
+        }
 		purchaseService.updateById(purchase);
 
         return R.ok();
@@ -110,6 +125,9 @@ public class PurchaseController {
     @RequestMapping("/delete")
     //@RequiresPermissions("ware:purchase:delete")
     public R delete(@RequestBody Long[] ids){
+        if (ids == null || ids.length == 0) {
+            return R.error(10001, "ids不能为空");
+        }
 		purchaseService.removeByIds(Arrays.asList(ids));
 
         return R.ok();

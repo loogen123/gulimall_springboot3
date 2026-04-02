@@ -2,7 +2,9 @@ package com.lg.gulimail.order.controller;
 
 import com.lg.common.utils.PageUtils;
 import com.lg.common.utils.R;
+import com.lg.common.vo.MemberResponseVo;
 import com.lg.gulimail.order.entity.OrderEntity;
+import com.lg.gulimail.order.interceptor.LoginUserInterceptor;
 import com.lg.gulimail.order.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -30,14 +32,12 @@ public class OrderController {
      */
     @PostMapping("/listWithItem")
     public R listWithItem(@RequestBody Map<String, Object> params){
-        try {
-            // 如果内部调用没有传递用户信息，这里可能会抛出异常
-            PageUtils page = orderService.queryPageWithItem(params);
-            return R.ok().put("page", page);
-        } catch (Exception e) {
-            // 捕获异常，比如未登录时 LoginUserInterceptor.loginUser.get() 可能返回 null
-            return R.error(401, "未登录或获取用户信息失败");
+        MemberResponseVo member = LoginUserInterceptor.loginUser.get();
+        if (member == null) {
+            return R.error(401, "未登录");
         }
+        PageUtils page = orderService.queryPageWithItem(params);
+        return R.ok().put("page", page);
     }
 
     /**

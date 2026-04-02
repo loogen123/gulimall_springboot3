@@ -19,9 +19,14 @@ public class MemberReceiveAddressServiceImpl extends ServiceImpl<MemberReceiveAd
 
     @Override
     public PageUtils queryPage(Map<String, Object> params) {
+        QueryWrapper<MemberReceiveAddressEntity> queryWrapper = new QueryWrapper<>();
+        Object memberId = params.get("member_id");
+        if (memberId != null) {
+            queryWrapper.eq("member_id", memberId);
+        }
         IPage<MemberReceiveAddressEntity> page = this.page(
                 new Query<MemberReceiveAddressEntity>().getPage(params),
-                new QueryWrapper<MemberReceiveAddressEntity>()
+                queryWrapper
         );
 
         return new PageUtils(page);

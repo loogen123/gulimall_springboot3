@@ -22,50 +22,40 @@ import java.util.Map;
  * @author Mark sunlightcs@gmail.com
  */
 public class Query<T> {
+    private static final long DEFAULT_PAGE = 1L;
+    private static final long DEFAULT_LIMIT = 10L;
+    private static final long MAX_LIMIT = 200L;
+    private static final String DESC = "desc";
 
     public IPage<T> getPage(Map<String, Object> params) {
         return this.getPage(params, null, false);
     }
 
     public IPage<T> getPage(Map<String, Object> params, String defaultOrderField, boolean isAsc) {
-        //分页参数
-        long curPage = 1;
-        long limit = 10;
+        long curPage = parsePositiveLong(params.get(Constant.PAGE), DEFAULT_PAGE);
+        long limit = parsePositiveLong(params.get(Constant.LIMIT), DEFAULT_LIMIT);
+        limit = Math.min(limit, MAX_LIMIT);
 
-        if(params.get(Constant.PAGE) != null){
-            curPage = Long.parseLong((String)params.get(Constant.PAGE));
-        }
-        if(params.get(Constant.LIMIT) != null){
-            limit = Long.parseLong((String)params.get(Constant.LIMIT));
-        }
-
-        //分页对象
         Page<T> page = new Page<>(curPage, limit);
 
-        //分页参数
         params.put(Constant.PAGE, page);
 
-        //排序字段
-        //防止SQL注入（因为sidx、order是通过拼接SQL实现排序的，会有SQL注入风险）
-        String orderField = SQLFilter.sqlInject((String)params.get(Constant.ORDER_FIELD));
-        String order = (String)params.get(Constant.ORDER);
+        String orderField = SQLFilter.sqlInject(toStringValue(params.get(Constant.ORDER_FIELD)));
+        String order = toStringValue(params.get(Constant.ORDER));
 
 
-        //前端字段排序
-        if(StringUtils.isNotEmpty(orderField) && StringUtils.isNotEmpty(order)){
+        if(StringUtils.isNotEmpty(orderField) && isSupportedOrder(order)){
             if(Constant.ASC.equalsIgnoreCase(order)) {
                 return  page.addOrder(OrderItem.asc(orderField));
-            }else {
+            }else if (DESC.equalsIgnoreCase(order)) {
                 return page.addOrder(OrderItem.desc(orderField));
             }
         }
 
-        //没有排序字段，则不排序
         if(StringUtils.isBlank(defaultOrderField)){
             return page;
         }
 
-        //默认排序
         if(isAsc) {
             page.addOrder(OrderItem.asc(defaultOrderField));
         }else {
@@ -73,5 +63,30 @@ public class Query<T> {
         }
 
         return page;
+    }
+
+    private long parsePositiveLong(Object value, long defaultValue) {
+        if (value == null) {
+            return defaultValue;
+        }
+        String text = String.valueOf(value);
+        if (StringUtils.isBlank(text)) {
+            return defaultValue;
+        }
+        try {
+            long parsed = Long.parseLong(text.trim());
+            return parsed > 0 ? parsed : defaultValue;
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    private String toStringValue(Object value) {
+        return value == null ? null : String.valueOf(value).trim();
+    }
+
+    private boolean isSupportedOrder(String order) {
+        return StringUtils.isNotEmpty(order)
+                && (Constant.ASC.equalsIgnoreCase(order) || DESC.equalsIgnoreCase(order));
     }
 }

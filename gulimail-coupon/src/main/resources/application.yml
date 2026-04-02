@@ -1,4 +1,9 @@
 spring:
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1.0.0
+    baseline-description: "Initial version"
   application:
     name: gulimail-coupon
   datasource:
@@ -18,18 +23,49 @@ spring:
         server-addr: 127.0.0.1:8848
         client-rpc-transport-enable: false
   rabbitmq:
-    host: 192.168.10.101  # 服务器 IP
+    host: 192.168.10.101
     port: 5672
+    virtual-host: /
+  data:
+    redis:
+      host: 192.168.10.101
+      port: 6379
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   global-config:
     db-config:
       id-type: auto
+logging:
+  level:
+    com.lg.gulimail: debug
+  pattern:
+    level: "%5p [${spring.application.name:-},%X{traceId:-},%X{spanId:-}]"
+
 management:
   zipkin:
     tracing:
-      # 把 localhost 改成你 Linux 服务器的 IP 地址
       endpoint: http://192.168.10.101:9411/api/v2/spans
+  tracing:
+    sampling:
+      probability: 1.0
+  endpoints:
+    web:
+      exposure:
+        include: "*"
 server:
   port: 7000
+
+seata:
+  tx-service-group: gulimail-coupon-tx-group
+  service:
+    vgroup-mapping:
+      gulimail-coupon-tx-group: default
+  registry:
+    type: nacos
+    nacos:
+      server-addr: 127.0.0.1:8848
+      namespace: ""
+      group: SEATA_GROUP
+      application: seata-server
+

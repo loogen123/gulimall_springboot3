@@ -6,21 +6,26 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.session.web.http.CookieSerializer;
 import org.springframework.session.web.http.DefaultCookieSerializer;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 public class GulimailSessionConfig {
+    @Value("${gulimail.search.session.secure:false}")
+    private boolean secureCookie;
+
     @Bean
     public CookieSerializer cookieSerializer() {
         DefaultCookieSerializer serializer = new DefaultCookieSerializer();
-        // 1. 必须放大作用域到父域名，否则子域名无法共享登录状态
-        serializer.setDomainName("gulimail.com"); 
+        serializer.setDomainName("gulimail.com");
         serializer.setCookieName("GULISESSION");
+        serializer.setUseHttpOnlyCookie(true);
+        serializer.setSameSite("Lax");
+        serializer.setUseSecureCookie(secureCookie);
         return serializer;
     }
 
     @Bean
     public RedisSerializer<Object> springSessionDefaultRedisSerializer() {
-        // 2. 必须使用 JSON 序列化器，否则 Redis 存的是二进制，乱码且容易报错
         return new GenericJackson2JsonRedisSerializer();
     }
 }

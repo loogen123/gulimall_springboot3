@@ -5,6 +5,8 @@ import feign.RequestInterceptor;
 import feign.RequestTemplate;
 import feign.Retryer;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -12,6 +14,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Configuration
 public class FeignConfig {
+    private static final Logger log = LoggerFactory.getLogger(FeignConfig.class);
     
     // 我们需要一个 InheritableThreadLocal 来在主线程和 AI 异步线程之间传递 Cookie，
     // InheritableThreadLocal 可以让子线程自动继承父线程的变量
@@ -45,7 +48,7 @@ public class FeignConfig {
                 // 1. 先尝试从全局 ThreadLocal 中获取（适配 AI 异步线程）
                 String aiCookie = USER_COOKIE_THREAD_LOCAL.get();
                 if (aiCookie != null && !aiCookie.isEmpty()) {
-                    System.out.println("【Feign请求拦截器】从 AI 异步线程获取到 Cookie: " + aiCookie);
+                    log.debug("feign interceptor uses propagated cookie from async context");
                     template.header("Cookie", aiCookie);
                     return;
                 }
@@ -58,14 +61,10 @@ public class FeignConfig {
                         // 优先尝试从请求头获取 Cookie
                         String cookie = request.getHeader("Cookie");
                         if (cookie != null) {
-                            System.out.println("【Feign请求拦截器】从主线程获取到 Cookie: " + cookie);
+                            log.debug("feign interceptor forwards cookie from request context");
                             template.header("Cookie", cookie);
-                        } else {
-                            System.out.println("【Feign请求拦截器】主线程请求中没有 Cookie。");
                         }
                     }
-                } else {
-                    System.out.println("【Feign请求拦截器】未获取到请求上下文，且 ThreadLocal 为空。");
                 }
             }
         };
